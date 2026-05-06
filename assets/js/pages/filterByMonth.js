@@ -222,9 +222,15 @@ async function handleFile() {
         sourceFiles.push(cloneStoredSourceFile(file));
 
         file.sheets.forEach((sheet) => {
-          const rows = Array.isArray(sheet.rows) ? sheet.rows : [];
-          allData = allData.concat(rows);
-        });
+  const rows = Array.isArray(sheet.rows)
+    ? sheet.rows.map((row) => ({
+        ...row,
+        __sourceSheetName: sheet.sheetName,
+      }))
+    : [];
+
+  allData = allData.concat(rows);
+});
 
         continue;
       }
@@ -237,17 +243,23 @@ async function handleFile() {
         sheets: [],
       };
 
-      workbook.SheetNames.forEach((sheetName) => {
-        const worksheet = workbook.Sheets[sheetName];
-        const sheetData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+workbook.SheetNames.forEach((sheetName) => {
+  const worksheet = workbook.Sheets[sheetName];
 
-        parsedSourceFile.sheets.push({
-          sheetName,
-          rows: sheetData,
-        });
+  const sheetData = XLSX.utils
+    .sheet_to_json(worksheet, { defval: "" })
+    .map((row) => ({
+      ...row,
+      __sourceSheetName: sheetName,
+    }));
 
-        allData = allData.concat(sheetData);
-      });
+  parsedSourceFile.sheets.push({
+    sheetName,
+    rows: sheetData,
+  });
+
+  allData = allData.concat(sheetData);
+});
 
       sourceFiles.push(parsedSourceFile);
     }

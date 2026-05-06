@@ -185,8 +185,7 @@ async function handleProcessDateFiles() {
 
       workbook.SheetNames.forEach((sheetName) => {
         const worksheet = workbook.Sheets[sheetName];
-        const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
+const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
         filePreview.sheets.push({
           sheetName,
           rows: sheetRows,

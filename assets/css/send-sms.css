@@ -403,6 +403,44 @@
 
 
 
+.send-now-person-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.send-now-person-card h3 {
+  margin-top: 0;
+}
+
+.send-now-excluded {
+  opacity: 0.55;
+  background: #fff1f1;
+  border-color: #ffc4c4;
+}
+
+.send-now-excluded h3,
+.send-now-excluded p {
+  text-decoration: line-through;
+}
+
+.send-now-people-grid {
+  align-items: stretch;
+}
+
+@media (max-width: 700px) {
+  .send-now-person-card {
+    flex-direction: column;
+  }
+
+  .send-now-person-card button {
+    width: 100%;
+  }
+}
+
+
+
 
 @media (max-width: 1100px) {
   .sms-month-count-grid {

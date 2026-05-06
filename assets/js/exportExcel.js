@@ -110,34 +110,34 @@ export function downloadCleanedOriginalWorkbook(
   customFileName = "BoomClub_To_Fix_Date_Of_Birth.xlsx"
 ) {
   const newWorkbook = XLSX.utils.book_new();
+  const allCleanedRows = [];
 
-  sourceFiles.forEach((sourceFile, fileIndex) => {
+  sourceFiles.forEach((sourceFile) => {
     const sheets = Array.isArray(sourceFile.sheets) ? sourceFile.sheets : [];
 
-    sheets.forEach((sheet, sheetIndex) => {
+    sheets.forEach((sheet) => {
       const rows = Array.isArray(sheet.rows) ? sheet.rows : [];
 
-      const cleanedRows = rows.map((person) => {
-        const { cleanedRow } = buildCleanPersonRow(person);
-        return cleanedRow;
+      rows.forEach((person) => {
+        const rowWithSourceSheet = {
+          ...person,
+          __sourceSheetName: person.__sourceSheetName || sheet.sheetName,
+        };
+
+        const { cleanedRow } = buildCleanPersonRow(rowWithSourceSheet);
+        allCleanedRows.push(cleanedRow);
       });
-
-      const headers = collectCleanHeaders(cleanedRows);
-      const worksheet = createSheetFromData(cleanedRows, headers);
-
-      let sheetName = sheet.sheetName || `Sheet ${sheetIndex + 1}`;
-
-      if (sourceFiles.length > 1) {
-        sheetName = `${fileIndex + 1}-${sheetName}`;
-      }
-
-      XLSX.utils.book_append_sheet(
-        newWorkbook,
-        worksheet,
-        sanitizeSheetNameForExport(sheetName)
-      );
     });
   });
+
+  const headers = collectCleanHeaders(allCleanedRows);
+  const worksheet = createSheetFromData(allCleanedRows, headers);
+
+  XLSX.utils.book_append_sheet(
+    newWorkbook,
+    worksheet,
+    sanitizeSheetNameForExport("All Data")
+  );
 
   XLSX.writeFile(newWorkbook, customFileName);
 }

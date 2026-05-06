@@ -165,8 +165,7 @@ export async function openFilePreview(file) {
 
     const sheets = workbook.SheetNames.map((sheetName) => {
       const worksheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
+const rows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
       return {
         sheetName,
         rows: cleanRowsForPreview(rows),

@@ -53,22 +53,35 @@
       <div id="smsReportContainer" class="sms-report-container"></div>
     </div>
 
-    <!-- SEND RIGHT NOW FLOW - EMPTY FOR NEXT STEP -->
-    <div id="smsSendNowPanel" class="sms-mode-panel hidden">
-      <button id="backToSmsModesFromNowBtn" type="button" class="sms-back-btn">
-        ← Back
-      </button>
+<!-- SEND RIGHT NOW FLOW -->
+<div id="smsSendNowPanel" class="sms-mode-panel hidden">
+  <button id="backToSmsModesFromNowBtn" type="button" class="sms-back-btn">
+    ← Back
+  </button>
 
-      <div class="sms-summary-box">
-        <h2>Send Right Now</h2>
-        <p>
-          This section will be used for immediate SMS sending.
-        </p>
-        <p class="sms-summary-note">
-          Next step: we will decide if this should upload a file, choose people manually,
-          or type phone numbers directly.
-        </p>
-      </div>
-    </div>
+  <div class="send-sms-upload-box">
+    <h2>Send Right Now</h2>
+    <p class="sms-summary-note">
+      Upload a generated monthly workbook, choose one sheet, exclude people if needed,
+      write the message, and save the SMS action for 19:00 Lebanon time.
+    </p>
+
+    <label class="send-sms-label" for="sendNowFileInput">
+      Upload Excel file (.xlsx only)
+    </label>
+
+    <input type="file" id="sendNowFileInput" accept=".xlsx" multiple />
+
+    <div id="sendNowSelectedFile" class="sms-selected-file"></div>
+
+    <div id="sendNowErrorLabel" class="sms-error-label" aria-live="polite"></div>
+
+    <button id="processSendNowFileBtn" type="button">
+      Process File
+    </button>
+  </div>
+
+  <div id="sendNowReportContainer" class="sms-report-container"></div>
+</div>
   </div>
 </section>

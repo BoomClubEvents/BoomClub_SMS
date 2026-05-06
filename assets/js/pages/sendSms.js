@@ -31,9 +31,22 @@ let smsFormDraft = {
   message: "",
 };
 
+
+
+let selectedSendNowFiles = [];
+let latestSendNowRows = [];
+let selectedSendNowSheet = "";
+let excludedSendNowRecipientKeys = new Set();
+let sendNowMessageDraft = "";
+
+
+
 export function initSendSmsPage() {
   const fileInput = document.getElementById("smsFileInput");
   const processBtn = document.getElementById("processSmsFileBtn");
+
+  const sendNowFileInput = document.getElementById("sendNowFileInput");
+  const processSendNowBtn = document.getElementById("processSendNowFileBtn");
 
   const modeChooser = document.getElementById("smsModeChooser");
   const schedulePanel = document.getElementById("smsSchedulePanel");
@@ -53,17 +66,28 @@ export function initSendSmsPage() {
     processBtn.addEventListener("click", handleProcessSmsFiles);
   }
 
+  if (sendNowFileInput) {
+  sendNowFileInput.addEventListener("change", handleSendNowFileSelection);
+}
+
+if (processSendNowBtn) {
+  processSendNowBtn.addEventListener("click", handleProcessSendNowFiles);
+}
+
   if (scheduleModeBtn) {
     scheduleModeBtn.addEventListener("click", () => {
       showSmsMode("schedule");
     });
   }
 
-  if (sendNowModeBtn) {
-    sendNowModeBtn.addEventListener("click", () => {
-      showSmsMode("sendNow");
-    });
-  }
+if (sendNowModeBtn) {
+  sendNowModeBtn.addEventListener("click", () => {
+    showSmsMode("sendNow");
+    renderSelectedSendNowFiles();
+    clearSendNowError();
+    clearSendNowReport();
+  });
+}
 
   if (backToSmsModesBtn) {
     backToSmsModesBtn.addEventListener("click", () => {
@@ -103,6 +127,576 @@ export function initSendSmsPage() {
   clearSmsError();
   clearSmsReport();
 }
+
+
+function handleSendNowFileSelection(event) {
+  const incomingFiles = Array.from(event.target.files || []);
+
+  if (incomingFiles.length === 0) {
+    return;
+  }
+
+  incomingFiles.forEach((file) => {
+    const alreadyExists = selectedSendNowFiles.some(
+      (existingFile) =>
+        existingFile.name === file.name &&
+        existingFile.size === file.size &&
+        existingFile.lastModified === file.lastModified
+    );
+
+    if (!alreadyExists) {
+      selectedSendNowFiles.push(file);
+    }
+  });
+
+  event.target.value = "";
+
+  clearSendNowError();
+  clearSendNowReport();
+  renderSelectedSendNowFiles();
+}
+
+function renderSelectedSendNowFiles() {
+  const selectedFileEl = document.getElementById("sendNowSelectedFile");
+  if (!selectedFileEl) return;
+
+  selectedFileEl.innerHTML = "";
+
+  if (selectedSendNowFiles.length === 0) {
+    return;
+  }
+
+  const listWrapper = document.createElement("div");
+  listWrapper.className = "sms-selected-files-list";
+
+  selectedSendNowFiles.forEach((file, index) => {
+    const row = document.createElement("div");
+    row.className = "sms-file-pill";
+
+    const leftSide = document.createElement("div");
+    leftSide.className = "sms-file-pill-left";
+
+    const label = document.createElement("strong");
+    label.textContent = `Selected file ${index + 1}: `;
+
+    const fileName = document.createElement("span");
+    fileName.textContent = file.name;
+    fileName.className = "sms-file-name";
+    fileName.title = "Click to preview this file";
+    fileName.addEventListener("click", async () => {
+      try {
+        await openFilePreview(file);
+      } catch (error) {
+        console.error("Preview failed:", error);
+      }
+    });
+
+    leftSide.appendChild(label);
+    leftSide.appendChild(fileName);
+
+    const rightSide = document.createElement("div");
+    rightSide.className = "sms-file-pill-actions";
+
+    const previewBtn = document.createElement("button");
+    previewBtn.type = "button";
+    previewBtn.className = "sms-small-action-btn";
+    previewBtn.textContent = "Preview";
+    previewBtn.addEventListener("click", async () => {
+      try {
+        await openFilePreview(file);
+      } catch (error) {
+        console.error("Preview failed:", error);
+      }
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "sms-small-remove-btn";
+    removeBtn.textContent = "✕";
+    removeBtn.title = "Remove file";
+    removeBtn.addEventListener("click", () => {
+      removeSelectedSendNowFile(index);
+    });
+
+    rightSide.appendChild(previewBtn);
+    rightSide.appendChild(removeBtn);
+
+    row.appendChild(leftSide);
+    row.appendChild(rightSide);
+    listWrapper.appendChild(row);
+  });
+
+  selectedFileEl.appendChild(listWrapper);
+}
+
+function removeSelectedSendNowFile(indexToRemove) {
+  const file = selectedSendNowFiles[indexToRemove];
+  if (!file) return;
+
+  const confirmed = confirm(`Are you sure you want to remove "${file.name}"?`);
+  if (!confirmed) return;
+
+  selectedSendNowFiles = selectedSendNowFiles.filter(
+    (_, index) => index !== indexToRemove
+  );
+
+  clearSendNowError();
+  clearSendNowReport();
+  renderSelectedSendNowFiles();
+}
+
+function clearSendNowError() {
+  const errorEl = document.getElementById("sendNowErrorLabel");
+  if (!errorEl) return;
+
+  errorEl.innerHTML = "";
+  errorEl.classList.remove("show");
+}
+
+function showSendNowError(message) {
+  const errorEl = document.getElementById("sendNowErrorLabel");
+  if (!errorEl) return;
+
+  errorEl.innerHTML = message;
+  errorEl.classList.add("show");
+}
+
+function clearSendNowReport() {
+  const reportContainer = document.getElementById("sendNowReportContainer");
+  if (!reportContainer) return;
+
+  reportContainer.innerHTML = "";
+  latestSendNowRows = [];
+  selectedSendNowSheet = "";
+  excludedSendNowRecipientKeys = new Set();
+  sendNowMessageDraft = "";
+}
+
+async function handleProcessSendNowFiles() {
+  clearSendNowError();
+  clearSendNowReport();
+
+  if (selectedSendNowFiles.length === 0) {
+    showSendNowError("Please upload at least one .xlsx file first.");
+    return;
+  }
+
+  const invalidExtensionFiles = selectedSendNowFiles.filter(
+    (file) => !file.name.toLowerCase().endsWith(".xlsx")
+  );
+
+  if (invalidExtensionFiles.length > 0) {
+    showSendNowError(
+      buildErrorListHtml([
+        ...invalidExtensionFiles.map(
+          (file) =>
+            `File "<strong>${escapeHtml(
+              file.name
+            )}</strong>" is invalid because only .xlsx files are allowed.`
+        ),
+      ])
+    );
+    return;
+  }
+
+  try {
+    const fileProcessingResults = [];
+
+    for (const file of selectedSendNowFiles) {
+      const fileData = await readFileAsArrayBuffer(file);
+      const workbook = XLSX.read(fileData, { type: "array" });
+
+      const validation = validateWorkbookStructure(workbook, file.name);
+
+      fileProcessingResults.push({
+        file,
+        workbook,
+        validation,
+      });
+    }
+
+    const invalidFiles = fileProcessingResults.filter(
+      (result) => !result.validation.isValid
+    );
+
+    if (invalidFiles.length > 0) {
+      const errorMessages = invalidFiles.map(
+        (result) => result.validation.message
+      );
+      showSendNowError(buildErrorListHtml(errorMessages));
+      return;
+    }
+
+    latestSendNowRows = extractSendNowRowsFromMultipleWorkbooks(
+      fileProcessingResults.map((result) => ({
+        fileName: result.file.name,
+        workbook: result.workbook,
+      }))
+    );
+
+    if (latestSendNowRows.length === 0) {
+      showSendNowError(
+        "The uploaded files are valid, but no usable rows with phone numbers were found."
+      );
+      return;
+    }
+
+    const counts = getSheetCounts(latestSendNowRows);
+    selectedSendNowSheet =
+      SELECTABLE_SMS_MONTHS.find((month) => (counts[month] || 0) > 0) || "";
+
+    excludedSendNowRecipientKeys = new Set();
+    renderSendNowReport();
+  } catch (error) {
+    console.error("Send Right Now processing failed:", error);
+    showSendNowError(
+      "Could not process the uploaded Excel file(s). Please make sure all selected files are valid .xlsx workbooks."
+    );
+  }
+}
+
+function extractSendNowRowsFromMultipleWorkbooks(fileWorkbooks) {
+  const rows = [];
+
+  fileWorkbooks.forEach(({ fileName, workbook }) => {
+    SELECTABLE_SMS_MONTHS.forEach((sheetName) => {
+      const actualSheetName = workbook.SheetNames.find(
+        (name) => normalizeSheetName(name) === sheetName
+      );
+
+      if (!actualSheetName) return;
+
+      const worksheet = workbook.Sheets[actualSheetName];
+const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
+      sheetRows.forEach((person, index) => {
+        const name = getNameValue(person) || "Unknown";
+        const dobRaw = getDobValue(person);
+        const phone = getPhoneValue(person);
+
+        if (!phone) return;
+
+        rows.push({
+          name,
+          phone,
+          originalDobLabel: dobRaw ? String(dobRaw) : "",
+          originalDobWeekday: "",
+          reminderDateLabel: "",
+          reminderDateWeekday: "",
+          sheetName,
+          sourceFileName: fileName,
+          rowNumber: index + 2,
+          sortDate: new Date(),
+        });
+      });
+    });
+  });
+
+  rows.sort((a, b) => {
+    const sheetCompare = a.sheetName.localeCompare(b.sheetName);
+    if (sheetCompare !== 0) return sheetCompare;
+
+    const nameCompare = a.name.localeCompare(b.name);
+    if (nameCompare !== 0) return nameCompare;
+
+    return a.phone.localeCompare(b.phone);
+  });
+
+  return rows;
+}
+
+function renderSendNowReport() {
+  const container = document.getElementById("sendNowReportContainer");
+  if (!container) return;
+
+  const groupedCounts = getSheetCounts(latestSendNowRows);
+  const selectedSheetRows = getSendNowSelectedSheetRows();
+  const finalRows = getSendNowFinalRows();
+
+  const countsHtml = SELECTABLE_SMS_MONTHS.map((sheetName) => {
+    const count = groupedCounts[sheetName] || 0;
+    const isSelected = selectedSendNowSheet === sheetName;
+
+    return `
+      <button
+        type="button"
+        class="sms-month-count-box sms-month-selectable ${
+          isSelected ? "selected" : ""
+        }"
+        data-send-now-sheet="${escapeHtml(sheetName)}"
+        ${count === 0 ? "disabled" : ""}
+        title="Click to choose this sheet for immediate sending"
+      >
+        <strong>${toDisplaySheetName(sheetName)}</strong>
+        <span>${count} ${count === 1 ? "person" : "people"}</span>
+        <small>${isSelected ? "Selected sheet" : "Click to select"}</small>
+      </button>
+    `;
+  }).join("");
+
+  const peopleHtml =
+    selectedSheetRows.length > 0
+      ? selectedSheetRows
+          .map((row) => {
+            const key = getSendNowRecipientKey(row);
+            const isExcluded = excludedSendNowRecipientKeys.has(key);
+
+            return `
+              <div class="sms-report-card send-now-person-card ${
+                isExcluded ? "send-now-excluded" : ""
+              }">
+                <div>
+                  <h3>${escapeHtml(row.name)}</h3>
+                  <p><strong>Phone:</strong> ${escapeHtml(row.phone)}</p>
+                  <p><strong>Sheet:</strong> ${escapeHtml(
+                    toDisplaySheetName(row.sheetName)
+                  )}</p>
+                  <p><strong>Source file:</strong> ${escapeHtml(
+                    row.sourceFileName
+                  )}</p>
+                </div>
+
+                <button
+                  type="button"
+                  class="sms-toolbar-btn ${
+                    isExcluded ? "sms-toolbar-btn-secondary" : ""
+                  }"
+                  data-send-now-recipient-key="${escapeHtml(key)}"
+                >
+                  ${isExcluded ? "Include again" : "Exclude"}
+                </button>
+              </div>
+            `;
+          })
+          .join("")
+      : `
+        <div class="empty-state sms-empty-selection-state">
+          <strong>No people found in this sheet.</strong>
+          <p>Please choose another sheet.</p>
+        </div>
+      `;
+
+  container.innerHTML = `
+    <div class="sms-summary-box">
+      <h2>Send Right Now Report</h2>
+      <p>
+        Choose <strong>one sheet</strong>, review the people inside it,
+        exclude anyone you do not want to send to, then write your SMS text.
+      </p>
+      <p class="sms-summary-note">
+        Send time is fixed at <strong>19:00 Lebanon time</strong>.
+      </p>
+    </div>
+
+    <div class="sms-month-count-grid">
+      ${countsHtml}
+    </div>
+
+    <div class="sms-filtered-summary-box">
+      <p>
+        Selected sheet:
+        <strong>${
+          selectedSendNowSheet
+            ? escapeHtml(toDisplaySheetName(selectedSendNowSheet))
+            : "None"
+        }</strong>
+      </p>
+      <p>
+        People in this sheet:
+        <strong>${selectedSheetRows.length}</strong>
+      </p>
+      <p>
+        Excluded people:
+        <strong>${excludedSendNowRecipientKeys.size}</strong>
+      </p>
+      <p>
+        Final recipients:
+        <strong>${finalRows.length}</strong>
+      </p>
+    </div>
+
+    <div class="sms-report-grid send-now-people-grid">
+      ${peopleHtml}
+    </div>
+
+    <div class="sms-form-box">
+      <label class="send-sms-label" for="sendNowSmsTextArea">
+        The text going to be sent is:
+      </label>
+
+      <textarea
+        id="sendNowSmsTextArea"
+        class="sms-textarea"
+        placeholder="Write the SMS message here..."
+      >${escapeHtml(sendNowMessageDraft)}</textarea>
+
+      <button
+        id="finalSendNowSmsBtn"
+        type="button"
+        title="Click to save this send-right-now SMS action into history."
+      >
+        Send Right Now at 19:00 Lebanon Time
+      </button>
+
+      <div id="sendNowSendErrorLabel" class="sms-error-label sms-send-error-label"></div>
+    </div>
+  `;
+
+  attachSendNowSheetEvents();
+  attachSendNowExcludeEvents();
+  attachSendNowMessageEvent();
+  attachFinalSendNowEvent();
+}
+
+function attachSendNowSheetEvents() {
+  document.querySelectorAll("[data-send-now-sheet]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const sheet = normalizeSheetName(button.dataset.sendNowSheet || "");
+      const counts = getSheetCounts(latestSendNowRows);
+
+      if (!sheet || !SELECTABLE_SMS_MONTHS.includes(sheet)) return;
+      if ((counts[sheet] || 0) === 0) return;
+
+      collectSendNowMessageDraft();
+      selectedSendNowSheet = sheet;
+      excludedSendNowRecipientKeys = new Set();
+      renderSendNowReport();
+    });
+  });
+}
+
+function attachSendNowExcludeEvents() {
+  document.querySelectorAll("[data-send-now-recipient-key]").forEach((button) => {
+    button.addEventListener("click", () => {
+      collectSendNowMessageDraft();
+
+      const key = button.dataset.sendNowRecipientKey || "";
+      if (!key) return;
+
+      if (excludedSendNowRecipientKeys.has(key)) {
+        excludedSendNowRecipientKeys.delete(key);
+      } else {
+        excludedSendNowRecipientKeys.add(key);
+      }
+
+      renderSendNowReport();
+    });
+  });
+}
+
+function attachSendNowMessageEvent() {
+  const textarea = document.getElementById("sendNowSmsTextArea");
+  if (!textarea) return;
+
+  textarea.addEventListener("input", collectSendNowMessageDraft);
+}
+
+function attachFinalSendNowEvent() {
+  const sendBtn = document.getElementById("finalSendNowSmsBtn");
+  if (!sendBtn) return;
+
+  sendBtn.addEventListener("click", () => {
+    collectSendNowMessageDraft();
+
+    const finalRows = getSendNowFinalRows();
+
+    if (!selectedSendNowSheet) {
+      showSendNowInlineError("Please select one sheet first.");
+      return;
+    }
+
+    if (finalRows.length === 0) {
+      showSendNowInlineError(
+        "No recipients are selected. Please include at least one person."
+      );
+      return;
+    }
+
+    if (!sendNowMessageDraft.trim()) {
+      showSendNowInlineError("Please write the SMS message before sending.");
+      return;
+    }
+
+    clearSendNowInlineError();
+
+    const confirmed = confirm(
+      `Are you sure you want to send this SMS right now to ${finalRows.length} people from ${toDisplaySheetName(
+        selectedSendNowSheet
+      )} at 19:00 Lebanon time?`
+    );
+
+    if (!confirmed) return;
+
+    const fromNumber = "+96170000000"; // replace later with your real connected number
+
+    saveSendSmsHistory({
+      mode: "sendNow",
+      fileName:
+        selectedSendNowFiles.length === 1
+          ? selectedSendNowFiles[0].name
+          : `${selectedSendNowFiles.length} files merged`,
+      selectedMonths: [toDisplaySheetName(selectedSendNowSheet)],
+      fromNumber,
+      recipients: getDetailedRecipients(finalRows),
+      messageText: sendNowMessageDraft.trim(),
+      sendDateLabel: getLebanonTodayDateLabel(),
+      sendTimeLabel: "19:00 Lebanon time",
+    });
+
+    alert("Send Right Now SMS action was saved in history successfully.");
+  });
+}
+
+function collectSendNowMessageDraft() {
+  const textarea = document.getElementById("sendNowSmsTextArea");
+  sendNowMessageDraft = textarea ? textarea.value : sendNowMessageDraft;
+}
+
+function getSendNowSelectedSheetRows() {
+  if (!selectedSendNowSheet) return [];
+
+  return latestSendNowRows.filter((row) => row.sheetName === selectedSendNowSheet);
+}
+
+function getSendNowFinalRows() {
+  return getSendNowSelectedSheetRows().filter(
+    (row) => !excludedSendNowRecipientKeys.has(getSendNowRecipientKey(row))
+  );
+}
+
+function getSendNowRecipientKey(row) {
+  return `${row.sourceFileName || ""}__${row.sheetName || ""}__${
+    row.rowNumber || ""
+  }__${row.phone || ""}`;
+}
+
+function showSendNowInlineError(message) {
+  const errorEl = document.getElementById("sendNowSendErrorLabel");
+  if (!errorEl) return;
+
+  errorEl.textContent = message;
+  errorEl.classList.add("show");
+}
+
+function clearSendNowInlineError() {
+  const errorEl = document.getElementById("sendNowSendErrorLabel");
+  if (!errorEl) return;
+
+  errorEl.textContent = "";
+  errorEl.classList.remove("show");
+}
+
+function getLebanonTodayDateLabel() {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Beirut",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date());
+}
+
+
+
+
 
 function handleSmsFileSelection(event) {
   const incomingFiles = Array.from(event.target.files || []);
@@ -418,8 +1012,7 @@ function extractSmsRowsFromMultipleWorkbooks(fileWorkbooks) {
       }
 
       const worksheet = workbook.Sheets[actualSheetName];
-      const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
+const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
       sheetRows.forEach((person, index) => {
         const name = getNameValue(person);
         const dobRaw = getDobValue(person);
@@ -1004,8 +1597,7 @@ async function convertLiveFileToStoredPreviewFile(file) {
     name: file.name,
     sheets: workbook.SheetNames.map((sheetName) => {
       const worksheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
+const rows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
       return {
         sheetName,
         rows,
@@ -1033,14 +1625,29 @@ function getNameValue(person) {
 }
 
 function getPhoneValue(person) {
-  return normalizeValue(
-    person["Phone number"] ||
+  const directValue = normalizeValue(
+    person["Phone Number 1"] ||
+      person["Phone number 1"] ||
+      person["phone number 1"] ||
       person["Phone Number"] ||
+      person["Phone number"] ||
+      person["phone number"] ||
       person["Phone"] ||
       person["phone"] ||
-      person["Phone num"] ||
-      person["phone number"]
+      person["Phone num"]
   );
+
+  if (directValue) return directValue;
+
+  const dynamicPhoneKey = Object.keys(person || {}).find((key) =>
+    String(key || "").trim().toLowerCase().startsWith("phone number")
+  );
+
+  if (dynamicPhoneKey) {
+    return normalizeValue(person[dynamicPhoneKey]);
+  }
+
+  return "";
 }
 
 function getDobValue(person) {

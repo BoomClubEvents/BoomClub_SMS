@@ -194,8 +194,8 @@ export function detectPhone(value) {
   return normalizePhone(value);
 }
 
-export function detectDOB(value) {
-  if (value === undefined || value === null || value === "") return null;
+export function detectDOB(value, expectedMonthIndex = null) {
+    if (value === undefined || value === null || value === "") return null;
 
   // Excel real date / serial number support
   // Your real input is DD/MM/YYYY, but Excel may internally read it as MM/DD/YYYY.
@@ -204,25 +204,16 @@ export function detectDOB(value) {
     const excelDate = XLSX.SSF.parse_date_code(value);
 
     if (excelDate && excelDate.y && excelDate.m && excelDate.d) {
-      const swappedDate = createDateBySwappingExcelMonthDay(
-        excelDate.y,
-        excelDate.m,
-        excelDate.d
-      );
+const smartExcelDate = createSmartExcelDate(
+  excelDate.y,
+  excelDate.m,
+  excelDate.d,
+  expectedMonthIndex
+);
 
-      if (swappedDate) {
-        return swappedDate;
-      }
-
-      const normalExcelDate = createValidDate(
-        excelDate.y,
-        excelDate.m,
-        excelDate.d
-      );
-
-      if (normalExcelDate) {
-        return normalExcelDate;
-      }
+if (smartExcelDate) {
+  return smartExcelDate;
+}
     }
   }
 
@@ -235,40 +226,159 @@ export function detectDOB(value) {
     const excelDate = XLSX.SSF.parse_date_code(num);
 
     if (excelDate && excelDate.y && excelDate.m && excelDate.d) {
-      const swappedDate = createDateBySwappingExcelMonthDay(
-        excelDate.y,
-        excelDate.m,
-        excelDate.d
-      );
+const smartExcelDate = createSmartExcelDate(
+  excelDate.y,
+  excelDate.m,
+  excelDate.d,
+  expectedMonthIndex
+);
 
-      if (swappedDate) {
-        return swappedDate;
-      }
-
-      const normalExcelDate = createValidDate(
-        excelDate.y,
-        excelDate.m,
-        excelDate.d
-      );
-
-      if (normalExcelDate) {
-        return normalExcelDate;
-      }
+if (smartExcelDate) {
+  return smartExcelDate;
+}
     }
   }
 
-  // Text date support: DD/MM/YYYY, DD-MM-YYYY, DD MM YYYY
-  const cleaned = raw.replace(/\s+/g, " ").replace(/\s*([\/\-])\s*/g, "$1");
+// Text date support:
+// DD/MM/YYYY, DD-MM-YYYY, DD MM YYYY
+// Also supports Month-Year like Aug-18, Dec-12, Jan 2011
+const cleaned = raw
+  .replace(/\s+/g, " ")
+  .replace(/\s*([\/\-])\s*/g, "$1")
+  .trim();
 
-  const match = cleaned.match(/^(\d{1,2})[\/\-\s](\d{1,2})[\/\-\s](\d{4})$/);
+const fullDateMatch = cleaned.match(/^(\d{1,2})[\/\-\s](\d{1,2})[\/\-\s](\d{4})$/);
 
-  if (!match) return null;
-
-  const day = parseInt(match[1], 10);
-  const month = parseInt(match[2], 10);
-  const year = parseInt(match[3], 10);
+if (fullDateMatch) {
+  const day = parseInt(fullDateMatch[1], 10);
+  const month = parseInt(fullDateMatch[2], 10);
+  const year = parseInt(fullDateMatch[3], 10);
 
   return createValidDate(year, month, day);
+}
+
+// Month-Year support.
+// Examples:
+// Aug-18  -> 01/08/2018
+// Dec-12  -> 01/12/2012
+// Jan 2011 -> 01/01/2011
+const monthYearMatch = cleaned.match(/^([a-zA-Z]+)[\/\-\s](\d{2}|\d{4})$/);
+
+if (monthYearMatch) {
+  const monthText = monthYearMatch[1].toLowerCase();
+  const yearText = monthYearMatch[2];
+
+  const monthMap = {
+    jan: 1,
+    january: 1,
+    feb: 2,
+    february: 2,
+    mar: 3,
+    march: 3,
+    apr: 4,
+    april: 4,
+    may: 5,
+    jun: 6,
+    june: 6,
+    jul: 7,
+    july: 7,
+    aug: 8,
+    august: 8,
+    sep: 9,
+    sept: 9,
+    september: 9,
+    oct: 10,
+    october: 10,
+    nov: 11,
+    november: 11,
+    dec: 12,
+    december: 12,
+  };
+
+  const month = monthMap[monthText];
+
+  if (!month) return null;
+
+  let year = parseInt(yearText, 10);
+
+  if (yearText.length === 2) {
+    year = 2000 + year;
+  }
+
+  return createValidDate(year, month, 1);
+}
+
+return null;
+}
+
+function getMonthIndexFromSheetName(sheetName) {
+  const text = normalizeValue(sheetName).toLowerCase();
+
+  const monthMap = {
+    january: 0,
+    february: 1,
+    march: 2,
+    april: 3,
+    may: 4,
+    june: 5,
+    july: 6,
+    august: 7,
+    september: 8,
+    october: 9,
+    november: 10,
+    december: 11,
+  };
+
+  return Object.prototype.hasOwnProperty.call(monthMap, text)
+    ? monthMap[text]
+    : null;
+}
+
+function createSmartExcelDate(
+  year,
+  excelMonth,
+  excelDay,
+  expectedMonthIndex = null
+) {
+  const excelMonthIndex = excelMonth - 1;
+
+  // If the row came from a known month sheet, use the sheet month as a hint.
+  // Example:
+  // January sheet + Excel reads 10/1/2020 as October 1
+  // means the user intended 10 January 2020.
+  if (
+    expectedMonthIndex !== null &&
+    expectedMonthIndex !== undefined &&
+    excelMonthIndex !== expectedMonthIndex
+  ) {
+    const swappedDate = createDateBySwappingExcelMonthDay(
+      year,
+      excelMonth,
+      excelDay
+    );
+
+    if (swappedDate && swappedDate.getMonth() === expectedMonthIndex) {
+      return swappedDate;
+    }
+  }
+
+  // Keep Excel month-year cases like Aug-18 as Excel already interpreted them:
+  // Aug-18 -> 01/08/2018
+  if (excelDay === 1) {
+    return createValidDate(year, excelMonth, excelDay);
+  }
+
+  const swappedDate = createDateBySwappingExcelMonthDay(
+    year,
+    excelMonth,
+    excelDay
+  );
+
+  if (swappedDate) {
+    return swappedDate;
+  }
+
+  return createValidDate(year, excelMonth, excelDay);
 }
 
 function createDateBySwappingExcelMonthDay(year, excelMonth, excelDay) {
@@ -369,25 +479,38 @@ function isDuplicateByValue(values, candidate) {
 }
 
 export function buildCleanPersonRow(person) {
-  const values = Object.values(person || {});
+  const sourceSheetName = normalizeValue(person?.__sourceSheetName || "");
+  const expectedMonthIndex = getMonthIndexFromSheetName(sourceSheetName);
+
+  const entries = Object.entries(person || {}).filter(
+    ([key]) => !String(key).startsWith("__")
+  );
+
+  const values = entries.map(([, value]) => value);
   const originalName = normalizeValue(values[0] ?? "");
 
   const detectedPhones = [];
   let detectedDob = null;
 
-  // First pass: detect phones and DOB from all cells.
-  values.forEach((cell) => {
-    const phone = detectPhone(cell);
+// First pass: detect DOBs before phones.
+// This prevents dates like 8/2/2019 from becoming fake phone numbers like 9618022019.
+values.forEach((cell) => {
+  const dob = detectDOB(cell, expectedMonthIndex);
 
-    if (phone && !detectedPhones.includes(phone)) {
-      detectedPhones.push(phone);
-    }
-
+  if (dob) {
     if (!detectedDob) {
-      const dob = detectDOB(cell);
-      if (dob) detectedDob = dob;
+      detectedDob = dob;
     }
-  });
+
+    return;
+  }
+
+  const phone = detectPhone(cell);
+
+  if (phone && !detectedPhones.includes(phone)) {
+    detectedPhones.push(phone);
+  }
+});
 
   const extras = [];
 
@@ -403,19 +526,19 @@ export function buildCleanPersonRow(person) {
       return;
     }
 
-    const normalizedPhone = normalizePhone(text);
-    if (normalizedPhone && detectedPhones.includes(normalizedPhone)) {
-      return;
-    }
+const parsedDob = detectDOB(text, expectedMonthIndex);
+if (
+  detectedDob &&
+  parsedDob &&
+  formatDateDDMMYYYY(parsedDob) === formatDateDDMMYYYY(detectedDob)
+) {
+  return;
+}
 
-    const parsedDob = detectDOB(text);
-    if (
-      detectedDob &&
-      parsedDob &&
-      formatDateDDMMYYYY(parsedDob) === formatDateDDMMYYYY(detectedDob)
-    ) {
-      return;
-    }
+const normalizedPhone = normalizePhone(text);
+if (normalizedPhone && detectedPhones.includes(normalizedPhone)) {
+  return;
+}
 
     if (!isDuplicateByValue(extras, text)) {
       extras.push(text);
