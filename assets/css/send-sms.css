@@ -429,12 +429,53 @@
   align-items: stretch;
 }
 
+
+
+.scheduled-person-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.scheduled-person-card h3 {
+  margin-top: 0;
+}
+
+.scheduled-person-not-selected {
+  opacity: 0.55;
+  background: #fff1f1;
+  border-color: #ffc4c4;
+}
+
+.scheduled-person-not-selected h3,
+.scheduled-person-not-selected p {
+  text-decoration: line-through;
+}
+
+.sms-people-selection-toolbar {
+  background: #FFF8E1;
+  border: 1px solid #FFE08A;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+
+
 @media (max-width: 700px) {
   .send-now-person-card {
     flex-direction: column;
   }
 
   .send-now-person-card button {
+    width: 100%;
+  }
+
+    .scheduled-person-card {
+    flex-direction: column;
+  }
+
+  .scheduled-person-card button {
     width: 100%;
   }
 }
