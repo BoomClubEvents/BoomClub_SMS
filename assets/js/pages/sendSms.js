@@ -1,5 +1,6 @@
 import { openFilePreview, openStoredFilesPreview } from "../previewModal.js";
 import { saveSendSmsHistory } from "../storage.js";
+import { buildCleanPersonRow } from "../utils.js";
 
 
 const REQUIRED_SHEETS = [
@@ -43,9 +44,11 @@ let smsFormDraft = {
 
 let selectedSendNowFiles = [];
 let latestSendNowRows = [];
-let selectedSendNowSheet = "";
 let excludedSendNowRecipientKeys = new Set();
 let sendNowMessageDraft = "";
+
+let sendNowSearchDraft = "";
+let sendNowAppliedSearch = "";
 
 
 
@@ -273,11 +276,12 @@ function clearSendNowReport() {
   const reportContainer = document.getElementById("sendNowReportContainer");
   if (!reportContainer) return;
 
-  reportContainer.innerHTML = "";
-  latestSendNowRows = [];
-  selectedSendNowSheet = "";
-  excludedSendNowRecipientKeys = new Set();
-  sendNowMessageDraft = "";
+reportContainer.innerHTML = "";
+latestSendNowRows = [];
+excludedSendNowRecipientKeys = new Set();
+sendNowMessageDraft = "";
+sendNowSearchDraft = "";
+sendNowAppliedSearch = "";
 }
 
 async function handleProcessSendNowFiles() {
@@ -308,50 +312,23 @@ async function handleProcessSendNowFiles() {
   }
 
   try {
-    const fileProcessingResults = [];
+    const allRows = [];
 
     for (const file of selectedSendNowFiles) {
       const fileData = await readFileAsArrayBuffer(file);
       const workbook = XLSX.read(fileData, { type: "array" });
 
-      const validation = validateWorkbookStructure(workbook, file.name);
-
-      fileProcessingResults.push({
-        file,
-        workbook,
-        validation,
-      });
+      allRows.push(...extractSendNowPhoneRowsFromAnyWorkbook(file.name, workbook));
     }
 
-    const invalidFiles = fileProcessingResults.filter(
-      (result) => !result.validation.isValid
-    );
-
-    if (invalidFiles.length > 0) {
-      const errorMessages = invalidFiles.map(
-        (result) => result.validation.message
-      );
-      showSendNowError(buildErrorListHtml(errorMessages));
-      return;
-    }
-
-    latestSendNowRows = extractSendNowRowsFromMultipleWorkbooks(
-      fileProcessingResults.map((result) => ({
-        fileName: result.file.name,
-        workbook: result.workbook,
-      }))
-    );
+    latestSendNowRows = removeDuplicateSendNowRows(allRows);
 
     if (latestSendNowRows.length === 0) {
       showSendNowError(
-        "The uploaded files are valid, but no usable rows with phone numbers were found."
+        "No usable phone numbers were found. The system searched the uploaded file(s), but could not detect valid phone numbers."
       );
       return;
     }
-
-    const counts = getSheetCounts(latestSendNowRows);
-    selectedSendNowSheet =
-      SELECTABLE_SMS_MONTHS.find((month) => (counts[month] || 0) > 0) || "";
 
     excludedSendNowRecipientKeys = new Set();
     renderSendNowReport();
@@ -361,6 +338,38 @@ async function handleProcessSendNowFiles() {
       "Could not process the uploaded Excel file(s). Please make sure all selected files are valid .xlsx workbooks."
     );
   }
+}
+function extractSendNowRowsFromAnyWorkbooks(fileWorkbooks) {
+  const rows = [];
+
+  fileWorkbooks.forEach(({ fileName, workbook, isGeneratedMonthlyWorkbook }) => {
+    if (isGeneratedMonthlyWorkbook) {
+      const generatedRows = extractSendNowRowsFromMultipleWorkbooks([
+        {
+          fileName,
+          workbook,
+        },
+      ]);
+
+      rows.push(...generatedRows);
+      return;
+    }
+
+    const randomRows = extractSendNowRowsFromRandomWorkbook(fileName, workbook);
+    rows.push(...randomRows);
+  });
+
+  rows.sort((a, b) => {
+    const sheetCompare = a.sheetName.localeCompare(b.sheetName);
+    if (sheetCompare !== 0) return sheetCompare;
+
+    const nameCompare = a.name.localeCompare(b.name);
+    if (nameCompare !== 0) return nameCompare;
+
+    return a.phone.localeCompare(b.phone);
+  });
+
+  return rows;
 }
 
 function extractSendNowRowsFromMultipleWorkbooks(fileWorkbooks) {
@@ -412,38 +421,144 @@ const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
   return rows;
 }
 
+function extractSendNowRowsFromRandomWorkbook(fileName, workbook) {
+  const rows = [];
+
+  if (!workbook || !Array.isArray(workbook.SheetNames)) {
+    return rows;
+  }
+
+  workbook.SheetNames.forEach((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName];
+    if (!worksheet) return;
+
+    const sheetRows = XLSX.utils.sheet_to_json(worksheet, {
+      defval: "",
+      raw: true,
+    });
+
+    sheetRows.forEach((person, index) => {
+      const normalizedPerson = {
+        ...person,
+        __sourceSheetName: sheetName,
+      };
+
+      const cleanResult = buildCleanPersonRow(normalizedPerson);
+      const cleanedRow = cleanResult?.cleanedRow || {};
+
+      const name = normalizeValue(cleanedRow.Name) || "Unknown";
+      const dobRaw = cleanedRow["Date of Birth"];
+      const phone = getFirstCleanPhoneFromCleanedRow(cleanedRow);
+
+      if (!dobRaw || !phone) {
+        return;
+      }
+
+      const parsedDob = parseDobFlexible(dobRaw);
+      if (!parsedDob) {
+        return;
+      }
+
+      const birthdayMonthName = SELECTABLE_SMS_MONTHS[parsedDob.getMonth()];
+
+      rows.push({
+        name,
+        phone,
+        originalDobLabel: formatDateDDMMYYYY(parsedDob),
+        originalDobWeekday: getWeekdayName(parsedDob),
+        reminderDateLabel: "",
+        reminderDateWeekday: "",
+        sheetName: birthdayMonthName,
+        sourceFileName: fileName,
+        sourceSheetName: sheetName,
+        rowNumber: index + 2,
+        sortDate: parsedDob,
+      });
+    });
+  });
+
+  return rows;
+}
+
+function extractSendNowPhoneRowsFromAnyWorkbook(fileName, workbook) {
+  const rows = [];
+
+  if (!workbook || !Array.isArray(workbook.SheetNames)) {
+    return rows;
+  }
+
+  workbook.SheetNames.forEach((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName];
+    if (!worksheet) return;
+
+    const sheetRows = XLSX.utils.sheet_to_json(worksheet, {
+      defval: "",
+      raw: true,
+    });
+
+    sheetRows.forEach((person, index) => {
+      const normalizedPerson = {
+        ...person,
+        __sourceSheetName: sheetName,
+      };
+
+      const cleanResult = buildCleanPersonRow(normalizedPerson);
+      const cleanedRow = cleanResult?.cleanedRow || {};
+
+      const name = normalizeValue(cleanedRow.Name) || "Unknown";
+      const phones = getAllCleanPhonesFromCleanedRow(cleanedRow);
+
+      phones.forEach((phone, phoneIndex) => {
+        rows.push({
+          name,
+          phone,
+          sourceFileName: fileName,
+          sourceSheetName: sheetName,
+          rowNumber: index + 2,
+          phoneIndex: phoneIndex + 1,
+          originalDobLabel: cleanedRow["Date of Birth"] || "",
+          sheetName: "send right now",
+          sortDate: new Date(),
+        });
+      });
+    });
+  });
+
+  return rows;
+}
+
+function getAllCleanPhonesFromCleanedRow(cleanedRow) {
+  return Object.keys(cleanedRow || {})
+    .filter((key) => String(key || "").startsWith("Phone Number "))
+    .map((key) => normalizeValue(cleanedRow[key]))
+    .filter(Boolean);
+}
+
+function removeDuplicateSendNowRows(rows) {
+  const seen = new Set();
+
+  return rows.filter((row) => {
+    const key = `${normalizeValue(row.phone)}__${normalizeValue(row.name)}`;
+
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
 function renderSendNowReport() {
   const container = document.getElementById("sendNowReportContainer");
   if (!container) return;
 
-  const groupedCounts = getSheetCounts(latestSendNowRows);
-  const selectedSheetRows = getSendNowSelectedSheetRows();
+  const visibleRows = getVisibleSendNowRows();
   const finalRows = getSendNowFinalRows();
 
-  const countsHtml = SELECTABLE_SMS_MONTHS.map((sheetName) => {
-    const count = groupedCounts[sheetName] || 0;
-    const isSelected = selectedSendNowSheet === sheetName;
-
-    return `
-      <button
-        type="button"
-        class="sms-month-count-box sms-month-selectable ${
-          isSelected ? "selected" : ""
-        }"
-        data-send-now-sheet="${escapeHtml(sheetName)}"
-        ${count === 0 ? "disabled" : ""}
-        title="Click to choose this sheet for immediate sending"
-      >
-        <strong>${toDisplaySheetName(sheetName)}</strong>
-        <span>${count} ${count === 1 ? "person" : "people"}</span>
-        <small>${isSelected ? "Selected sheet" : "Click to select"}</small>
-      </button>
-    `;
-  }).join("");
-
   const peopleHtml =
-    selectedSheetRows.length > 0
-      ? selectedSheetRows
+    visibleRows.length > 0
+      ? visibleRows
           .map((row) => {
             const key = getSendNowRecipientKey(row);
             const isExcluded = excludedSendNowRecipientKeys.has(key);
@@ -455,12 +570,18 @@ function renderSendNowReport() {
                 <div>
                   <h3>${escapeHtml(row.name)}</h3>
                   <p><strong>Phone:</strong> ${escapeHtml(row.phone)}</p>
-                  <p><strong>Sheet:</strong> ${escapeHtml(
-                    toDisplaySheetName(row.sheetName)
-                  )}</p>
-                  <p><strong>Source file:</strong> ${escapeHtml(
-                    row.sourceFileName
-                  )}</p>
+                  ${
+                    row.originalDobLabel
+                      ? `<p><strong>DOB detected:</strong> ${escapeHtml(row.originalDobLabel)}</p>`
+                      : ""
+                  }
+                  <p><strong>Source file:</strong> ${escapeHtml(row.sourceFileName)}</p>
+                  ${
+                    row.sourceSheetName
+                      ? `<p><strong>Original sheet:</strong> ${escapeHtml(row.sourceSheetName)}</p>`
+                      : ""
+                  }
+                  <p><strong>Original row:</strong> ${escapeHtml(row.rowNumber)}</p>
                 </div>
 
                 <button
@@ -470,7 +591,7 @@ function renderSendNowReport() {
                   }"
                   data-send-now-recipient-key="${escapeHtml(key)}"
                 >
-                  ${isExcluded ? "Include again" : "Exclude"}
+                  ${isExcluded ? "Include again" : "Remove"}
                 </button>
               </div>
             `;
@@ -478,8 +599,8 @@ function renderSendNowReport() {
           .join("")
       : `
         <div class="empty-state sms-empty-selection-state">
-          <strong>No people found in this sheet.</strong>
-          <p>Please choose another sheet.</p>
+          <strong>No people match this search.</strong>
+          <p>Try another name, phone number, file name, or sheet name.</p>
         </div>
       `;
 
@@ -487,39 +608,68 @@ function renderSendNowReport() {
     <div class="sms-summary-box">
       <h2>Send Right Now Report</h2>
       <p>
-        Choose <strong>one sheet</strong>, review the people inside it,
-        exclude anyone you do not want to send to, then write your SMS text.
+        The system scanned the uploaded file(s), detected phone numbers, and listed them below.
+        Date of birth is ignored in this mode.
       </p>
       <p class="sms-summary-note">
-        Send time is fixed at <strong>19:00 Lebanon time</strong>.
+        This action will be saved with the current date and current time.
       </p>
-    </div>
-
-    <div class="sms-month-count-grid">
-      ${countsHtml}
     </div>
 
     <div class="sms-filtered-summary-box">
       <p>
-        Selected sheet:
-        <strong>${
-          selectedSendNowSheet
-            ? escapeHtml(toDisplaySheetName(selectedSendNowSheet))
-            : "None"
-        }</strong>
+        Total detected numbers:
+        <strong>${latestSendNowRows.length}</strong>
       </p>
       <p>
-        People in this sheet:
-        <strong>${selectedSheetRows.length}</strong>
-      </p>
-      <p>
-        Excluded people:
+        Removed people:
         <strong>${excludedSendNowRecipientKeys.size}</strong>
       </p>
       <p>
         Final recipients:
         <strong>${finalRows.length}</strong>
       </p>
+    </div>
+
+    <div class="sms-demo-filter-box">
+      <div class="sms-demo-filter-header">
+        <div>
+          <h3>Search the list</h3>
+          <p>
+            Search by name, phone number, file name, or sheet name. This only changes what you see below.
+          </p>
+        </div>
+
+        <button type="button" id="sendNowClearSearchBtn" class="sms-toolbar-btn sms-toolbar-btn-secondary">
+          Clear Search
+        </button>
+      </div>
+
+      <div class="sms-demo-search-row">
+        <label class="send-sms-label" for="sendNowSearchInput">
+          Search
+        </label>
+
+        <input
+          id="sendNowSearchInput"
+          type="text"
+          class="sms-demo-search-input"
+          placeholder="Example: Mia, 96135, Book1, Sheet1..."
+          value="${escapeHtml(sendNowSearchDraft)}"
+        />
+      </div>
+
+      <div class="sms-demo-filter-actions">
+        <button type="button" id="sendNowApplySearchBtn" class="sms-toolbar-btn">
+          Apply Search
+        </button>
+      </div>
+
+      <div class="sms-demo-filter-result">
+        Showing <strong>${visibleRows.length}</strong> number(s) from
+        <strong>${latestSendNowRows.length}</strong> detected number(s).
+        Final recipients still remain <strong>${finalRows.length}</strong>.
+      </div>
     </div>
 
     <div class="sms-report-grid send-now-people-grid">
@@ -542,17 +692,70 @@ function renderSendNowReport() {
         type="button"
         title="Click to save this send-right-now SMS action into history."
       >
-        Send Right Now at 19:00 Lebanon Time
+        Send Right Now
       </button>
 
       <div id="sendNowSendErrorLabel" class="sms-error-label sms-send-error-label"></div>
     </div>
   `;
 
-  attachSendNowSheetEvents();
+  attachSendNowSearchEvents();
   attachSendNowExcludeEvents();
   attachSendNowMessageEvent();
   attachFinalSendNowEvent();
+}
+
+function attachSendNowSearchEvents() {
+  const searchInput = document.getElementById("sendNowSearchInput");
+
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      collectSendNowMessageDraft();
+      sendNowSearchDraft = searchInput.value || "";
+    });
+  }
+
+  const applyBtn = document.getElementById("sendNowApplySearchBtn");
+  if (applyBtn) {
+    applyBtn.addEventListener("click", () => {
+      collectSendNowMessageDraft();
+      sendNowAppliedSearch = sendNowSearchDraft;
+      renderSendNowReport();
+    });
+  }
+
+  const clearBtn = document.getElementById("sendNowClearSearchBtn");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      collectSendNowMessageDraft();
+      sendNowSearchDraft = "";
+      sendNowAppliedSearch = "";
+      renderSendNowReport();
+    });
+  }
+}
+
+function getVisibleSendNowRows() {
+  const search = normalizeValue(sendNowAppliedSearch).toLowerCase();
+
+  if (!search) {
+    return latestSendNowRows;
+  }
+
+  return latestSendNowRows.filter((row) => {
+    const searchableText = [
+      row.name,
+      row.phone,
+      row.sourceFileName,
+      row.sourceSheetName,
+      row.originalDobLabel,
+      row.rowNumber,
+    ]
+      .map((value) => normalizeValue(value).toLowerCase())
+      .join(" ");
+
+    return searchableText.includes(search);
+  });
 }
 
 function attachSendNowSheetEvents() {
@@ -607,11 +810,6 @@ function attachFinalSendNowEvent() {
 
     const finalRows = getSendNowFinalRows();
 
-    if (!selectedSendNowSheet) {
-      showSendNowInlineError("Please select one sheet first.");
-      return;
-    }
-
     if (finalRows.length === 0) {
       showSendNowInlineError(
         "No recipients are selected. Please include at least one person."
@@ -626,10 +824,10 @@ function attachFinalSendNowEvent() {
 
     clearSendNowInlineError();
 
+    const currentDateTime = getLebanonCurrentDateTimeLabels();
+
     const confirmed = confirm(
-      `Are you sure you want to send this SMS right now to ${finalRows.length} people from ${toDisplaySheetName(
-        selectedSendNowSheet
-      )} at 19:00 Lebanon time?`
+      `Are you sure you want to send this SMS right now to ${finalRows.length} people?`
     );
 
     if (!confirmed) return;
@@ -642,12 +840,12 @@ function attachFinalSendNowEvent() {
         selectedSendNowFiles.length === 1
           ? selectedSendNowFiles[0].name
           : `${selectedSendNowFiles.length} files merged`,
-      selectedMonths: [toDisplaySheetName(selectedSendNowSheet)],
+      selectedMonths: ["Send Right Now"],
       fromNumber,
       recipients: getDetailedRecipients(finalRows),
       messageText: sendNowMessageDraft.trim(),
-      sendDateLabel: getLebanonTodayDateLabel(),
-      sendTimeLabel: "19:00 Lebanon time",
+      sendDateLabel: currentDateTime.dateLabel,
+      sendTimeLabel: currentDateTime.timeLabel,
     });
 
     alert("Send Right Now SMS action was saved in history successfully.");
@@ -660,21 +858,19 @@ function collectSendNowMessageDraft() {
 }
 
 function getSendNowSelectedSheetRows() {
-  if (!selectedSendNowSheet) return [];
-
-  return latestSendNowRows.filter((row) => row.sheetName === selectedSendNowSheet);
+  return latestSendNowRows;
 }
 
 function getSendNowFinalRows() {
-  return getSendNowSelectedSheetRows().filter(
+  return latestSendNowRows.filter(
     (row) => !excludedSendNowRecipientKeys.has(getSendNowRecipientKey(row))
   );
 }
 
 function getSendNowRecipientKey(row) {
-  return `${row.sourceFileName || ""}__${row.sheetName || ""}__${
+  return `${row.sourceFileName || ""}__${row.sourceSheetName || ""}__${
     row.rowNumber || ""
-  }__${row.phone || ""}`;
+  }__${row.phoneIndex || ""}__${row.phone || ""}`;
 }
 
 function showSendNowInlineError(message) {
@@ -691,6 +887,30 @@ function clearSendNowInlineError() {
 
   errorEl.textContent = "";
   errorEl.classList.remove("show");
+}
+
+function getLebanonCurrentDateTimeLabels() {
+  const now = new Date();
+
+  const dateLabel = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Beirut",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(now);
+
+  const timeLabel = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Beirut",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(now);
+
+  return {
+    dateLabel,
+    timeLabel: `${timeLabel} Lebanon time`,
+  };
 }
 
 function getLebanonTodayDateLabel() {
@@ -910,45 +1130,32 @@ async function handleProcessSmsFiles() {
       const fileData = await readFileAsArrayBuffer(file);
       const workbook = XLSX.read(fileData, { type: "array" });
 
-      const validation = validateWorkbookStructure(workbook, file.name);
-
       fileProcessingResults.push({
         file,
         workbook,
-        validation,
+        isGeneratedMonthlyWorkbook: isGeneratedMonthlySmsWorkbook(workbook),
       });
     }
 
-    const invalidFiles = fileProcessingResults.filter(
-      (result) => !result.validation.isValid
-    );
-
-    if (invalidFiles.length > 0) {
-      const errorMessages = invalidFiles.map(
-        (result) => result.validation.message
-      );
-      showSmsError(buildErrorListHtml(errorMessages));
-      return;
-    }
-
-    const mergedRows = extractSmsRowsFromMultipleWorkbooks(
+    const mergedRows = extractSmsRowsFromAnyWorkbooks(
       fileProcessingResults.map((result) => ({
         fileName: result.file.name,
         workbook: result.workbook,
+        isGeneratedMonthlyWorkbook: result.isGeneratedMonthlyWorkbook,
       }))
     );
 
     if (mergedRows.length === 0) {
       showSmsError(
-        "The uploaded files are valid, but no usable rows with both name and date of birth were found."
+        "No usable people were found. The system searched the uploaded file(s), but could not find enough valid rows containing a date of birth and phone number."
       );
       return;
     }
 
-latestSmsRows = mergedRows;
-initializeSelectedSmsMonths(mergedRows);
-initializeSelectedSmsRecipients(mergedRows);
-renderSmsReport(mergedRows, selectedSmsFiles.length);
+    latestSmsRows = mergedRows;
+    initializeSelectedSmsMonths(mergedRows);
+    initializeSelectedSmsRecipients(mergedRows);
+    renderSmsReport(mergedRows, selectedSmsFiles.length);
   } catch (error) {
     console.error("Send SMS processing failed:", error);
     showSmsError(
@@ -1011,6 +1218,58 @@ function validateWorkbookStructure(workbook, fileName = "Unknown file") {
     isValid: true,
     message: "",
   };
+}
+
+function isGeneratedMonthlySmsWorkbook(workbook) {
+  const originalSheetNames = Array.isArray(workbook?.SheetNames)
+    ? workbook.SheetNames
+    : [];
+
+  const normalizedSheetNames = originalSheetNames.map(normalizeSheetName);
+  const uniqueSheets = [...new Set(normalizedSheetNames)];
+
+  const hasAllRequiredSheets = REQUIRED_SHEETS.every((requiredSheet) =>
+    uniqueSheets.includes(requiredSheet)
+  );
+
+  const hasOnlyRequiredSheets = uniqueSheets.every((sheet) =>
+    REQUIRED_SHEETS.includes(sheet)
+  );
+
+  return hasAllRequiredSheets && hasOnlyRequiredSheets;
+}
+
+function extractSmsRowsFromAnyWorkbooks(fileWorkbooks) {
+  const rows = [];
+
+  fileWorkbooks.forEach(({ fileName, workbook, isGeneratedMonthlyWorkbook }) => {
+    if (isGeneratedMonthlyWorkbook) {
+      const generatedRows = extractSmsRowsFromMultipleWorkbooks([
+        {
+          fileName,
+          workbook,
+        },
+      ]);
+
+      rows.push(...generatedRows);
+      return;
+    }
+
+    const randomRows = extractSmsRowsFromRandomWorkbook(fileName, workbook);
+    rows.push(...randomRows);
+  });
+
+  rows.sort((a, b) => {
+    const dateCompare = a.sortDate - b.sortDate;
+    if (dateCompare !== 0) return dateCompare;
+
+    const nameCompare = a.name.localeCompare(b.name);
+    if (nameCompare !== 0) return nameCompare;
+
+    return a.sourceFileName.localeCompare(b.sourceFileName);
+  });
+
+  return rows;
 }
 
 function extractSmsRowsFromMultipleWorkbooks(fileWorkbooks) {
@@ -1131,6 +1390,75 @@ const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
   return rows;
 }
 
+function extractSmsRowsFromRandomWorkbook(fileName, workbook) {
+  const rows = [];
+  const currentYear = new Date().getFullYear();
+
+  if (!workbook || !Array.isArray(workbook.SheetNames)) {
+    return rows;
+  }
+
+  workbook.SheetNames.forEach((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName];
+    if (!worksheet) return;
+
+    const sheetRows = XLSX.utils.sheet_to_json(worksheet, {
+      defval: "",
+      raw: true,
+    });
+
+    sheetRows.forEach((person, index) => {
+      const normalizedPerson = {
+        ...person,
+        __sourceSheetName: sheetName,
+      };
+
+      const cleanResult = buildCleanPersonRow(normalizedPerson);
+      const cleanedRow = cleanResult?.cleanedRow || {};
+
+      const name = normalizeValue(cleanedRow.Name);
+      const dobRaw = cleanedRow["Date of Birth"];
+      const phone = getFirstCleanPhoneFromCleanedRow(cleanedRow);
+
+      if (!dobRaw || !phone) {
+        return;
+      }
+
+      const parsedDob = parseDobFlexible(dobRaw);
+      if (!parsedDob) {
+        return;
+      }
+
+      const originalDobLabel = formatDateDDMMYYYY(parsedDob);
+      const originalDobWeekday = getWeekdayName(parsedDob);
+
+      const birthdayMonthName = SELECTABLE_SMS_MONTHS[parsedDob.getMonth()];
+
+      const reminderDate = getReminderDateThirtyDaysBefore(
+        parsedDob.getDate(),
+        parsedDob.getMonth() + 1,
+        currentYear
+      );
+
+      rows.push({
+        name: name || "Unknown",
+        phone,
+        originalDobLabel,
+        originalDobWeekday,
+        reminderDateLabel: formatDateDDMMYYYY(reminderDate),
+        reminderDateWeekday: getWeekdayName(reminderDate),
+        sheetName: birthdayMonthName,
+        sourceFileName: fileName,
+        sourceSheetName: sheetName,
+        rowNumber: index + 2,
+        sortDate: reminderDate,
+      });
+    });
+  });
+
+  return rows;
+}
+
 function initializeSelectedSmsMonths(rows) {
   const counts = getSheetCounts(rows);
   selectedSmsMonths = new Set();
@@ -1243,8 +1571,12 @@ const reportCardsHtml =
                 <div>
                   <h3>${escapeHtml(row.name)}</h3>
                   <p><strong>Phone:</strong> ${escapeHtml(row.phone || "No phone")}</p>
-                  <p><strong>Source file:</strong> ${escapeHtml(row.sourceFileName)}</p>
-                  <p><strong>Sheet:</strong> ${escapeHtml(
+<p><strong>Source file:</strong> ${escapeHtml(row.sourceFileName)}</p>
+${
+  row.sourceSheetName
+    ? `<p><strong>Original sheet:</strong> ${escapeHtml(row.sourceSheetName)}</p>`
+    : ""
+}                  <p><strong>Sheet:</strong> ${escapeHtml(
                     toDisplaySheetName(row.sheetName)
                   )}</p>
                   <p>
@@ -1288,10 +1620,10 @@ const reportCardsHtml =
         The system reviewed <strong>${rows.length}</strong> people with usable names and dates of birth
         from <strong>${filesCount}</strong> ${filesCount === 1 ? "file" : "files"}.
       </p>
-      <p class="sms-summary-note">
-        When multiple files are uploaded, the system merges the same month sheets together
-        as one combined source: January with January, February with February, and so on.
-      </p>
+<p class="sms-summary-note">
+  The system supports generated monthly workbooks and random Excel files. If a random file is uploaded,
+  the system scans the file, detects dates of birth and phone numbers, then groups people by birthday month automatically.
+</p>
     </div>
 
     <div class="sms-month-selection-toolbar">
@@ -1951,6 +2283,18 @@ function buildErrorListHtml(messages) {
       ${messages.map((message) => `<li>${message}</li>`).join("")}
     </ul>
   `;
+}
+
+function getFirstCleanPhoneFromCleanedRow(cleanedRow) {
+  const phoneKey = Object.keys(cleanedRow || {}).find((key) =>
+    String(key || "").startsWith("Phone Number ")
+  );
+
+  if (!phoneKey) {
+    return "";
+  }
+
+  return normalizeValue(cleanedRow[phoneKey]);
 }
 
 function getNameValue(person) {
