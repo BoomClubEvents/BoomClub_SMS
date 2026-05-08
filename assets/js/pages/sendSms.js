@@ -26,6 +26,13 @@ let selectedSmsFiles = [];
 let latestSmsRows = [];
 let selectedSmsMonths = new Set();
 let selectedSmsRecipientKeys = new Set();
+
+let smsDisplayFilterMonths = new Set();
+let smsDisplaySearchText = "";
+
+let smsDraftFilterMonths = new Set();
+let smsDraftSearchText = "";
+
 let smsFormDraft = {
   hour: "19",
   minute: "00",
@@ -856,6 +863,12 @@ function clearSmsReport() {
 latestSmsRows = [];
 selectedSmsMonths = new Set();
 selectedSmsRecipientKeys = new Set();
+smsDisplayFilterMonths = new Set();
+smsDisplaySearchText = "";
+
+smsDraftFilterMonths = new Set();
+smsDraftSearchText = "";
+
 smsFormDraft = {
   hour: "19",
   minute: "00",
@@ -1176,14 +1189,15 @@ function renderSmsReport(rows, filesCount = 1) {
   const container = document.getElementById("smsReportContainer");
   if (!container) return;
 
-  const groupedCounts = getSheetCounts(rows);
-  const selectedMonthRows = getRowsInsideSelectedSmsMonths();
-  const filteredRows = getFilteredSmsRows();
-  const filteredRecipients = getUniqueRecipients(filteredRows);
-  const notSelectedPeopleCount = Math.max(
-    selectedMonthRows.length - filteredRows.length,
-    0
-  );
+const groupedCounts = getSheetCounts(rows);
+const selectedMonthRows = getRowsInsideSelectedSmsMonths();
+const visibleRows = getVisibleSmsRowsForDemo();
+const filteredRows = getFilteredSmsRows();
+const filteredRecipients = getUniqueRecipients(filteredRows);
+const notSelectedPeopleCount = Math.max(
+  selectedMonthRows.length - filteredRows.length,
+  0
+);
 
   const countsHtml = REQUIRED_SHEETS.map((sheetName) => {
     const count = groupedCounts[sheetName] || 0;
@@ -1215,9 +1229,9 @@ function renderSmsReport(rows, filesCount = 1) {
     `;
   }).join("");
 
-  const reportCardsHtml =
-    selectedMonthRows.length > 0
-      ? selectedMonthRows
+const reportCardsHtml =
+    visibleRows.length > 0
+      ? visibleRows
           .map((row) => {
             const key = getSmsRecipientKey(row);
             const isSelectedPerson = selectedSmsRecipientKeys.has(key);
@@ -1262,8 +1276,8 @@ function renderSmsReport(rows, filesCount = 1) {
           .join("")
       : `
         <div class="empty-state sms-empty-selection-state">
-          <strong>No selected months yet.</strong>
-          <p>Please select at least one month box above to prepare the SMS recipients.</p>
+<strong>No people match this filter.</strong>
+<p>Select months above, change the demo filter, or search by another name, phone number, or date.</p>
         </div>
       `;
 
@@ -1318,25 +1332,97 @@ function renderSmsReport(rows, filesCount = 1) {
       </p>
     </div>
 
-    <div class="sms-month-selection-toolbar sms-people-selection-toolbar">
-      <div class="sms-month-selection-info">
-        <strong>People selection:</strong>
-        choose exactly who will receive the scheduled SMS inside the selected month(s).
-      </div>
+<div class="sms-month-selection-toolbar sms-people-selection-toolbar">
+  <div class="sms-month-selection-info">
+    <strong>People selection:</strong>
+    choose exactly who will receive the scheduled SMS inside the selected month(s).
+  </div>
 
-      <div class="sms-month-selection-actions">
-        <button type="button" id="smsSelectAllPeopleBtn" class="sms-toolbar-btn">
-          Select All People
-        </button>
-        <button type="button" id="smsClearAllPeopleBtn" class="sms-toolbar-btn sms-toolbar-btn-secondary">
-          Clear All People
-        </button>
-      </div>
+  <div class="sms-month-selection-actions">
+    <button type="button" id="smsSelectAllPeopleBtn" class="sms-toolbar-btn">
+      Select All People
+    </button>
+    <button type="button" id="smsClearAllPeopleBtn" class="sms-toolbar-btn sms-toolbar-btn-secondary">
+      Clear All People
+    </button>
+  </div>
+</div>
+
+<div class="sms-demo-filter-box">
+  <div class="sms-demo-filter-header">
+    <div>
+      <h3>Filter the demo list</h3>
+      <p>
+        This only changes what you see below. It does not remove people from the final SMS sending list.
+      </p>
     </div>
 
-    <div class="sms-report-grid">
-      ${reportCardsHtml}
+    <button type="button" id="smsClearDemoFiltersBtn" class="sms-toolbar-btn sms-toolbar-btn-secondary">
+      Clear Demo Filter
+    </button>
+  </div>
+
+  <details class="sms-filter-dropdown" id="smsFilterDropdown">
+    <summary>
+      Filter by month
+      <span>
+        ${
+          smsDraftFilterMonths.size === 0
+            ? "All selected months"
+            : [...smsDraftFilterMonths].map(toDisplaySheetName).join(", ")
+        }
+      </span>
+    </summary>
+
+    <div class="sms-filter-month-grid">
+      ${SELECTABLE_SMS_MONTHS.map((month) => {
+        const isChecked = smsDraftFilterMonths.has(month);
+
+        return `
+          <label class="sms-filter-month-option">
+            <input
+              type="checkbox"
+              value="${escapeHtml(month)}"
+              data-sms-demo-filter-month="${escapeHtml(month)}"
+              ${isChecked ? "checked" : ""}
+            />
+            <span>${toDisplaySheetName(month)}</span>
+          </label>
+        `;
+      }).join("")}
     </div>
+  </details>
+
+  <div class="sms-demo-search-row">
+    <label class="send-sms-label" for="smsDemoSearchInput">
+      Search by name, phone number, or date
+    </label>
+
+    <input
+      id="smsDemoSearchInput"
+      type="text"
+      class="sms-demo-search-input"
+      placeholder="Example: Mia, 96135, 08/02/2019, February..."
+      value="${escapeHtml(smsDraftSearchText)}"
+    />
+  </div>
+
+  <div class="sms-demo-filter-actions">
+    <button type="button" id="smsApplyDemoFiltersBtn" class="sms-toolbar-btn">
+      Apply Filter
+    </button>
+  </div>
+
+  <div class="sms-demo-filter-result">
+    Showing <strong>${visibleRows.length}</strong> person/people from
+    <strong>${selectedMonthRows.length}</strong> people inside selected month(s).
+    Final selected recipients still remain <strong>${filteredRows.length}</strong>.
+  </div>
+</div>
+
+<div class="sms-report-grid">
+  ${reportCardsHtml}
+</div>
 
     <div class="sms-form-box">
       <label class="send-sms-label" for="smsHourInput">
@@ -1397,11 +1483,12 @@ function renderSmsReport(rows, filesCount = 1) {
     </p>
   `;
 
-  attachMonthSelectionEvents();
-  attachToolbarEvents();
-  attachPeopleToolbarEvents();
-  attachRecipientSelectionEvents();
-  attachTimeValidationEvents();
+attachMonthSelectionEvents();
+attachToolbarEvents();
+attachPeopleToolbarEvents();
+attachRecipientSelectionEvents();
+attachDemoFilterEvents();
+attachTimeValidationEvents();
   attachFormDraftEvents();
   validateSendTimeInputs();
 
@@ -1564,6 +1651,105 @@ function attachRecipientSelectionEvents() {
       renderSmsReport(latestSmsRows, selectedSmsFiles.length);
     });
   });
+}
+
+function attachDemoFilterEvents() {
+  document.querySelectorAll("[data-sms-demo-filter-month]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      collectSmsFormDraft();
+
+      const month = normalizeSheetName(checkbox.dataset.smsDemoFilterMonth || "");
+      if (!month || !SELECTABLE_SMS_MONTHS.includes(month)) return;
+
+      if (checkbox.checked) {
+        smsDraftFilterMonths.add(month);
+      } else {
+        smsDraftFilterMonths.delete(month);
+      }
+
+      updateFilterDropdownLabel();
+    });
+  });
+
+  const searchInput = document.getElementById("smsDemoSearchInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      collectSmsFormDraft();
+      smsDraftSearchText = searchInput.value || "";
+    });
+  }
+
+  const applyFiltersBtn = document.getElementById("smsApplyDemoFiltersBtn");
+  if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener("click", () => {
+      collectSmsFormDraft();
+
+      smsDisplayFilterMonths = new Set(smsDraftFilterMonths);
+      smsDisplaySearchText = smsDraftSearchText;
+
+      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+    });
+  }
+
+  const clearFiltersBtn = document.getElementById("smsClearDemoFiltersBtn");
+  if (clearFiltersBtn) {
+    clearFiltersBtn.addEventListener("click", () => {
+      collectSmsFormDraft();
+
+      smsDisplayFilterMonths = new Set();
+      smsDisplaySearchText = "";
+
+      smsDraftFilterMonths = new Set();
+      smsDraftSearchText = "";
+
+      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+    });
+  }
+}
+
+function updateFilterDropdownLabel() {
+  const dropdown = document.getElementById("smsFilterDropdown");
+  if (!dropdown) return;
+
+  const summaryLabel = dropdown.querySelector("summary span");
+  if (!summaryLabel) return;
+
+  summaryLabel.textContent =
+    smsDraftFilterMonths.size === 0
+      ? "All selected months"
+      : [...smsDraftFilterMonths].map(toDisplaySheetName).join(", ");
+}
+
+function getVisibleSmsRowsForDemo() {
+  let rows = getRowsInsideSelectedSmsMonths();
+
+  if (smsDisplayFilterMonths.size > 0) {
+    rows = rows.filter((row) => smsDisplayFilterMonths.has(row.sheetName));
+  }
+
+  const search = normalizeValue(smsDisplaySearchText).toLowerCase();
+
+  if (search) {
+    rows = rows.filter((row) => {
+      const searchableText = [
+        row.name,
+        row.phone,
+        row.originalDobLabel,
+        row.originalDobWeekday,
+        row.reminderDateLabel,
+        row.reminderDateWeekday,
+        row.sheetName,
+        toDisplaySheetName(row.sheetName || ""),
+        row.sourceFileName,
+      ]
+        .map((value) => normalizeValue(value).toLowerCase())
+        .join(" ");
+
+      return searchableText.includes(search);
+    });
+  }
+
+  return rows;
 }
 
 function attachTimeValidationEvents() {

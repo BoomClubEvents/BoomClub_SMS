@@ -461,6 +461,119 @@
 }
 
 
+.sms-demo-filter-box {
+  margin-top: 22px;
+  background: #FFF8E1;
+  border: 1px solid #FFE08A;
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.sms-demo-filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sms-demo-filter-header h3 {
+  margin: 0 0 6px;
+  color: #A61B1B;
+}
+
+.sms-demo-filter-header p {
+  margin: 0;
+  color: #5C3A00;
+}
+
+.sms-filter-dropdown {
+  margin-top: 16px;
+  background: white;
+  border: 1px solid #FFE08A;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.sms-filter-dropdown summary {
+  cursor: pointer;
+  color: #A61B1B;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sms-filter-dropdown summary span {
+  color: #5C3A00;
+  font-weight: 500;
+}
+
+.sms-filter-month-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sms-filter-month-option {
+  background: #FFF8E1;
+  border: 1px solid #FFE08A;
+  border-radius: 10px;
+  padding: 10px;
+  color: #5C3A00;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sms-filter-month-option:hover {
+  background: #FFECC2;
+}
+
+.sms-demo-search-row {
+  margin-top: 16px;
+}
+
+.sms-demo-search-input {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid #FFE08A;
+  border-radius: 12px;
+  font: inherit;
+  background: white;
+  color: #2B2B2B;
+}
+
+.sms-demo-search-input:focus {
+  outline: none;
+  border-color: #D62828;
+  box-shadow: 0 0 0 3px rgba(214, 40, 40, 0.12);
+}
+
+.sms-demo-filter-result {
+  margin-top: 14px;
+  color: #5C3A00;
+  background: #fff;
+  border: 1px dashed #FFE08A;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+
+.sms-demo-filter-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sms-demo-filter-actions .sms-toolbar-btn {
+  min-width: 160px;
+}
+
+
 
 @media (max-width: 700px) {
   .send-now-person-card {
@@ -511,6 +624,10 @@
   .sms-mode-card {
     min-height: 240px;
   }
+
+  .sms-filter-month-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -531,5 +648,22 @@
   .sms-toolbar-btn {
     width: 100%;
   }
+
+    .sms-filter-month-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sms-filter-dropdown summary {
+    flex-direction: column;
+  }
+
+    .sms-demo-filter-actions {
+    justify-content: stretch;
+  }
+
+  .sms-demo-filter-actions .sms-toolbar-btn {
+    width: 100%;
+  }
 }
+
 
