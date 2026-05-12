@@ -142,15 +142,19 @@ export function getSendSmsHistory() {
   return getHistory().filter((item) => item.type === "sendSms");
 }
 
+
 export function saveSendWhatsAppHistory({
   mode = "scheduled",
   fileName = "",
   selectedMonths = [],
   fromNumber,
   recipients = [],
+  excludedRecipients = [],
   messageText = "",
   sendDateLabel = "",
   sendTimeLabel = "",
+  sourceFiles = [],
+  editPayload = null,
 }) {
   const history = getHistory();
 
@@ -162,9 +166,12 @@ export function saveSendWhatsAppHistory({
     selectedMonths,
     fromNumber,
     recipients,
+    excludedRecipients,
     messageText,
     sendDateLabel,
     sendTimeLabel,
+    sourceFiles,
+    editPayload,
     createdAt: new Date().toISOString(),
   };
 

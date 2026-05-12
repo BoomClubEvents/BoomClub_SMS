@@ -3,6 +3,7 @@ import {
   buildCleanPersonRow,
   collectCleanHeaders,
   getMonthName,
+  sortRowsWithPhonesFirst,
 } from "../utils.js";
 import {
   saveDateHistory,
@@ -185,13 +186,19 @@ async function handleProcessDateFiles() {
 
       workbook.SheetNames.forEach((sheetName) => {
         const worksheet = workbook.Sheets[sheetName];
-const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
-        filePreview.sheets.push({
-          sheetName,
-          rows: sheetRows,
-        });
+const sheetRows = XLSX.utils
+  .sheet_to_json(worksheet, { defval: "" })
+  .map((row) => ({
+    ...row,
+    __sourceSheetName: sheetName,
+  }));
 
-        allRows.push(...sheetRows);
+filePreview.sheets.push({
+  sheetName,
+  rows: sheetRows,
+});
+
+allRows.push(...sheetRows);
       });
 
       sourceFiles.push(filePreview);
@@ -249,6 +256,11 @@ function processRowsByDate(rows) {
 
     groupedByDate[key].push(cleanedRow);
   });
+
+  const sortedNotSpecifiedPeople = sortRowsWithPhonesFirst(notSpecifiedPeople);
+
+notSpecifiedPeople.length = 0;
+notSpecifiedPeople.push(...sortedNotSpecifiedPeople);
 
   const allCleanRows = [
     ...Object.values(groupedByDate).flat(),

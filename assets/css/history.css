@@ -238,3 +238,111 @@
   color: #666;
   margin-top: 3px;
 }
+
+
+.WhatsApp-history-message-box {
+  margin-top: 16px;
+  background: #fff8e1;
+  border: 1px solid #ffe08a;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.WhatsApp-history-message-box strong {
+  display: block;
+  color: #a61b1b;
+  margin-bottom: 8px;
+}
+
+.WhatsApp-history-message-box p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.WhatsApp-history-excluded {
+  background: #fff1f1;
+  border-color: #ffb3b3;
+}
+
+.WhatsApp-history-excluded strong {
+  color: #a61b1b;
+}
+/* =========================
+   WHATSAPP HISTORY PEOPLE LABELS
+========================= */
+
+.WhatsApp-history-label-line {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  color: #2b2b2b;
+}
+
+.WhatsApp-history-label-line strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.WhatsApp-history-excluded-label strong {
+  color: #a61b1b;
+}
+
+.WhatsApp-history-toggle-icon {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #a61b1b;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-block;
+  min-width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.WhatsApp-history-toggle-icon:hover {
+  color: #d62828;
+  background: transparent !important;
+}
+
+.WhatsApp-history-people-list {
+  width: 100%;
+  margin: 10px 0 0;
+  padding-left: 22px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.WhatsApp-history-people-list.hidden {
+  display: none !important;
+}
+
+.WhatsApp-history-people-list li {
+  width: 100%;
+}
+
+.WhatsApp-history-people-list li span {
+  display: inline-block;
+  margin-left: 8px;
+  color: #a61b1b;
+  font-weight: 700;
+}
+
+.WhatsApp-history-people-list li small {
+  display: block;
+  color: #666;
+  margin-top: 3px;
+  line-height: 1.45;
+}

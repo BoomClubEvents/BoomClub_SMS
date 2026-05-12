@@ -57,8 +57,41 @@
         </button>
       </div>
 
-      <p>Previously scheduled or sent WhatsApp actions.</p>
-      <div id="historySendWhatsAppContent"></div>
+<p>Choose which WhatsApp history you want to view.</p>
+
+<div id="sendWhatsAppHistoryChooser" class="history-home-view">
+  <button id="showSendNowWhatsAppHistoryBtn" class="history-choice-btn" type="button">
+    Send Right Now
+  </button>
+
+  <button id="showScheduledWhatsAppHistoryBtn" class="history-choice-btn" type="button">
+    Scheduled WhatsApp
+  </button>
+</div>
+
+<div id="sendNowWhatsAppHistoryPanel" class="history-detail-view hidden">
+  <div class="history-section-header">
+    <h3>Send Right Now History</h3>
+    <button id="backToSendWhatsAppHistoryChooserFromNow" class="back-history-btn" type="button">
+      Back
+    </button>
+  </div>
+
+  <p>WhatsApp messages sent immediately.</p>
+  <div id="historySendNowWhatsAppContent"></div>
+</div>
+
+<div id="scheduledWhatsAppHistoryPanel" class="history-detail-view hidden">
+  <div class="history-section-header">
+    <h3>Scheduled WhatsApp History</h3>
+    <button id="backToSendWhatsAppHistoryChooserFromScheduled" class="back-history-btn" type="button">
+      Back
+    </button>
+  </div>
+
+  <p>WhatsApp birthday reminder messages scheduled for later.</p>
+  <div id="historyScheduledWhatsAppContent"></div>
+</div>
     </div>
   </div>
 </section>

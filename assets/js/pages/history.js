@@ -28,6 +28,11 @@ function bindHistoryEvents() {
   const backToHistoryHomeFromDate = document.getElementById("backToHistoryHomeFromDate");
   const showSendWhatsAppHistoryBtn = document.getElementById("showSendWhatsAppHistoryBtn");
   const backToHistoryHomeFromSendWhatsApp = document.getElementById("backToHistoryHomeFromSendWhatsApp");
+  const showSendNowWhatsAppHistoryBtn = document.getElementById("showSendNowWhatsAppHistoryBtn");
+  const showScheduledWhatsAppHistoryBtn = document.getElementById("showScheduledWhatsAppHistoryBtn");
+  const backToSendWhatsAppHistoryChooserFromNow = document.getElementById("backToSendWhatsAppHistoryChooserFromNow");
+  const backToSendWhatsAppHistoryChooserFromScheduled = document.getElementById("backToSendWhatsAppHistoryChooserFromScheduled");
+
 
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener("click", clearHistory);
@@ -55,6 +60,22 @@ function bindHistoryEvents() {
 
 if (backToHistoryHomeFromSendWhatsApp) {
   backToHistoryHomeFromSendWhatsApp.addEventListener("click", showHistoryHome);
+}
+
+if (showSendNowWhatsAppHistoryBtn) {
+  showSendNowWhatsAppHistoryBtn.addEventListener("click", showSendNowWhatsAppHistoryPanel);
+}
+
+if (showScheduledWhatsAppHistoryBtn) {
+  showScheduledWhatsAppHistoryBtn.addEventListener("click", showScheduledWhatsAppHistoryPanel);
+}
+
+if (backToSendWhatsAppHistoryChooserFromNow) {
+  backToSendWhatsAppHistoryChooserFromNow.addEventListener("click", showSendWhatsAppHistoryChooser);
+}
+
+if (backToSendWhatsAppHistoryChooserFromScheduled) {
+  backToSendWhatsAppHistoryChooserFromScheduled.addEventListener("click", showSendWhatsAppHistoryChooser);
 }
 }
 
@@ -104,6 +125,38 @@ function showSendWhatsAppHistoryView() {
   if (monthView) monthView.classList.add("hidden");
   if (dateView) dateView.classList.add("hidden");
   if (sendWhatsAppView) sendWhatsAppView.classList.remove("hidden");
+
+  showSendWhatsAppHistoryChooser();
+}
+
+function showSendWhatsAppHistoryChooser() {
+  const chooser = document.getElementById("sendWhatsAppHistoryChooser");
+  const sendNowPanel = document.getElementById("sendNowWhatsAppHistoryPanel");
+  const scheduledPanel = document.getElementById("scheduledWhatsAppHistoryPanel");
+
+  if (chooser) chooser.classList.remove("hidden");
+  if (sendNowPanel) sendNowPanel.classList.add("hidden");
+  if (scheduledPanel) scheduledPanel.classList.add("hidden");
+}
+
+function showSendNowWhatsAppHistoryPanel() {
+  const chooser = document.getElementById("sendWhatsAppHistoryChooser");
+  const sendNowPanel = document.getElementById("sendNowWhatsAppHistoryPanel");
+  const scheduledPanel = document.getElementById("scheduledWhatsAppHistoryPanel");
+
+  if (chooser) chooser.classList.add("hidden");
+  if (sendNowPanel) sendNowPanel.classList.remove("hidden");
+  if (scheduledPanel) scheduledPanel.classList.add("hidden");
+}
+
+function showScheduledWhatsAppHistoryPanel() {
+  const chooser = document.getElementById("sendWhatsAppHistoryChooser");
+  const sendNowPanel = document.getElementById("sendNowWhatsAppHistoryPanel");
+  const scheduledPanel = document.getElementById("scheduledWhatsAppHistoryPanel");
+
+  if (chooser) chooser.classList.add("hidden");
+  if (sendNowPanel) sendNowPanel.classList.add("hidden");
+  if (scheduledPanel) scheduledPanel.classList.remove("hidden");
 }
 
 function renderMonthHistory() {
@@ -164,18 +217,40 @@ function renderDateHistory() {
 
 
 function renderSendWhatsAppHistory() {
-  const container = document.getElementById("historySendWhatsAppContent");
+  const sendNowContainer = document.getElementById("historySendNowWhatsAppContent");
+  const scheduledContainer = document.getElementById("historyScheduledWhatsAppContent");
+
   const history = getSendWhatsAppHistory();
 
+  const sendNowHistory = history.filter((item) => item.mode === "sendNow");
+  const scheduledHistory = history.filter((item) => item.mode === "scheduled");
+
+  renderSendWhatsAppHistoryGroup(
+    sendNowContainer,
+    sendNowHistory,
+    "No Send Right Now history yet.",
+    "Your immediately sent WhatsApp actions will appear here."
+  );
+
+  renderSendWhatsAppHistoryGroup(
+    scheduledContainer,
+    scheduledHistory,
+    "No Scheduled WhatsApp history yet.",
+    "Your scheduled WhatsApp birthday reminders will appear here."
+  );
+}
+
+
+function renderSendWhatsAppHistoryGroup(container, history, emptyTitle, emptyText) {
   if (!container) return;
 
   container.innerHTML = "";
 
-  if (history.length === 0) {
+  if (!Array.isArray(history) || history.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
-        <strong>No WhatsApp history yet.</strong>
-        <p>Your scheduled or sent WhatsApp actions will appear here.</p>
+        <strong>${escapeHtml(emptyTitle)}</strong>
+        <p>${escapeHtml(emptyText)}</p>
       </div>
     `;
     return;
@@ -190,6 +265,8 @@ function renderSendWhatsAppHistory() {
 
   container.appendChild(list);
 }
+
+
 
 function createHistoryCard(item, mode) {
   const card = document.createElement("div");
@@ -282,39 +359,19 @@ function createSendWhatsAppHistoryCard(item) {
   const modeLabel = item.mode === "sendNow" ? "Send Right Now" : "Scheduled";
 
   const recipients = Array.isArray(item.recipients) ? item.recipients : [];
+  const excludedRecipients = Array.isArray(item.excludedRecipients)
+    ? item.excludedRecipients
+    : [];
+
   const selectedMonths = Array.isArray(item.selectedMonths)
     ? item.selectedMonths.join(", ")
     : "Not specified";
 
-  const recipientsPreview = recipients.length
-    ? recipients
-        .map((recipient) => {
-          if (typeof recipient === "string") {
-            return `<li><strong>${escapeHtml(recipient)}</strong></li>`;
-          }
-
-          return `
-            <li>
-              <strong>${escapeHtml(recipient.name || "Unknown")}</strong>
-              <span>${escapeHtml(recipient.phone || "")}</span>
-              <small>
-                ${escapeHtml(recipient.month || "")}
-                ${
-                  recipient.dateOfBirth
-                    ? ` | DOB: ${escapeHtml(recipient.dateOfBirth)}`
-                    : ""
-                }
-                ${
-                  recipient.reminderDate
-                    ? ` | Reminder: ${escapeHtml(recipient.reminderDate)}`
-                    : ""
-                }
-              </small>
-            </li>
-          `;
-        })
-        .join("")
-    : `<li>No recipients saved.</li>`;
+  const recipientsPreview = buildWhatsAppPeopleList(recipients, "No recipients saved.");
+  const excludedPreview = buildWhatsAppPeopleList(
+    excludedRecipients,
+    "No excluded people for this action."
+  );
 
   card.innerHTML = `
     <div class="history-datetime">${escapeHtml(formatFullDateTime(item.createdAt))}</div>
@@ -337,19 +394,151 @@ function createSendWhatsAppHistoryCard(item) {
       <p><strong>From:</strong> ${escapeHtml(item.fromNumber || "Not specified")}</p>
       <p><strong>Send date:</strong> ${escapeHtml(item.sendDateLabel || "Not specified")}</p>
       <p><strong>Send time:</strong> ${escapeHtml(item.sendTimeLabel || "Not specified")}</p>
-      <p><strong>Message:</strong> ${escapeHtml(item.messageText || "No message text saved.")}</p>
-      <p><strong>Total recipients:</strong> ${recipients.length}</p>
+      <p><strong>Total sent recipients:</strong> ${recipients.length}</p>
+      <p><strong>Total not sent / excluded:</strong> ${excludedRecipients.length}</p>
     </div>
 
-    <div class="WhatsApp-history-recipients">
-      <strong>Recipients</strong>
-      <ul>
-        ${recipientsPreview}
-      </ul>
+    <div class="WhatsApp-history-message-box">
+      <strong>Message text sent</strong>
+      <p>${escapeHtml(item.messageText || "No message text saved.")}</p>
+    </div>
+
+<div class="WhatsApp-history-label-line">
+  <strong>People who received this WhatsApp (${recipients.length})</strong>
+
+  <span
+    class="WhatsApp-history-toggle-icon"
+    data-collapse-target="recipients-${escapeHtml(item.id)}"
+    role="button"
+    tabindex="0"
+    aria-label="Show or hide recipients"
+  >
+    +
+  </span>
+</div>
+
+<ul
+  id="recipients-${escapeHtml(item.id)}"
+  class="WhatsApp-history-people-list hidden"
+>
+  ${recipientsPreview}
+</ul>
+
+<div class="WhatsApp-history-label-line WhatsApp-history-excluded-label">
+  <strong>People removed / not sent (${excludedRecipients.length})</strong>
+
+  <span
+    class="WhatsApp-history-toggle-icon"
+    data-collapse-target="excluded-${escapeHtml(item.id)}"
+    role="button"
+    tabindex="0"
+    aria-label="Show or hide excluded people"
+  >
+    +
+  </span>
+</div>
+
+<ul
+  id="excluded-${escapeHtml(item.id)}"
+  class="WhatsApp-history-people-list hidden"
+>
+  ${excludedPreview}
+</ul>
+    <div class="history-card-actions">
+      <button
+        type="button"
+        class="history-action-btn history-edit-btn"
+        data-edit-send-whatsapp-id="${escapeHtml(item.id)}"
+      >
+        Edit
+      </button>
     </div>
   `;
 
-  return card;
+const editBtn = card.querySelector("[data-edit-send-whatsapp-id]");
+if (editBtn) {
+  editBtn.addEventListener("click", () => {
+    openSendWhatsAppHistoryEdit(item);
+  });
+}
+
+card.querySelectorAll("[data-collapse-target]").forEach((toggle) => {
+  const togglePeopleList = () => {
+    const targetId = toggle.dataset.collapseTarget;
+    const target = card.querySelector(`#${CSS.escape(targetId)}`);
+
+    if (!target) return;
+
+    const isClosed = target.classList.contains("hidden");
+
+    target.classList.toggle("hidden");
+    toggle.textContent = isClosed ? "−" : "+";
+  };
+
+  toggle.addEventListener("click", togglePeopleList);
+
+  toggle.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      togglePeopleList();
+    }
+  });
+});
+
+return card;
+}
+
+function buildWhatsAppPeopleList(people, emptyText) {
+  if (!Array.isArray(people) || people.length === 0) {
+    return `<li>${escapeHtml(emptyText)}</li>`;
+  }
+
+  return people
+    .map((person) => {
+      if (typeof person === "string") {
+        return `<li><strong>${escapeHtml(person)}</strong></li>`;
+      }
+
+      return `
+        <li>
+          <strong>${escapeHtml(person.name || "Unknown")}</strong>
+          <span>${escapeHtml(person.phone || "")}</span>
+          <small>
+            ${
+              person.month
+                ? `Mode/Month: ${escapeHtml(person.month)}`
+                : ""
+            }
+            ${
+              person.dateOfBirth
+                ? ` | DOB: ${escapeHtml(person.dateOfBirth)}`
+                : ""
+            }
+            ${
+              person.reminderDate
+                ? ` | Reminder: ${escapeHtml(person.reminderDate)}`
+                : ""
+            }
+            ${
+              person.sourceFileName
+                ? ` | File: ${escapeHtml(person.sourceFileName)}`
+                : ""
+            }
+            ${
+              person.sourceSheetName
+                ? ` | Sheet: ${escapeHtml(person.sourceSheetName)}`
+                : ""
+            }
+            ${
+              person.rowNumber
+                ? ` | Row: ${escapeHtml(person.rowNumber)}`
+                : ""
+            }
+          </small>
+        </li>
+      `;
+    })
+    .join("");
 }
 
 function buildFallbackSourceFilesFromHistoryItem(historyItem) {
@@ -469,6 +658,20 @@ function openHistoryItemEdit(historyItem, mode) {
   }
 
   navigateToPage("filter-by-date");
+}
+
+function openSendWhatsAppHistoryEdit(historyItem) {
+  if (!historyItem) {
+    alert("This WhatsApp history item is not available.");
+    return;
+  }
+
+  saveEditDraft({
+    ...historyItem,
+    type: "sendWhatsApp",
+  });
+
+  navigateToPage("send-sms");
 }
 
 function navigateToPage(pageName) {

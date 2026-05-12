@@ -1,5 +1,9 @@
 import { openFilePreview, openStoredFilesPreview } from "../previewModal.js";
-import { saveSendWhatsAppHistory } from "../storage.js";
+import {
+  saveSendWhatsAppHistory,
+  getEditDraft,
+  clearEditDraft,
+} from "../storage.js";
 import { buildCleanPersonRow } from "../utils.js";
 
 
@@ -41,6 +45,8 @@ let WhatsAppFormDraft = {
 };
 
 
+let restoredScheduledFileName = "";
+let restoredSendNowFileName = "";
 
 let selectedSendNowFiles = [];
 let latestSendNowRows = [];
@@ -132,16 +138,116 @@ if (sendNowModeBtn) {
     }
   }
 
+const didRestoreDraft = restoreSendWhatsAppEditDraft(showWhatsAppMode);
+
+if (!didRestoreDraft) {
   showWhatsAppMode("chooser");
 
   renderSelectedWhatsAppFiles();
   clearWhatsAppError();
   clearWhatsAppReport();
+
+  renderSelectedSendNowFiles();
+  clearSendNowError();
+  clearSendNowReport();
+}
+}
+
+function restoreSendWhatsAppEditDraft(showWhatsAppMode) {
+  const draft = getEditDraft();
+
+  if (!draft || draft.type !== "sendWhatsApp") {
+    return false;
+  }
+
+  const payload = draft.editPayload || {};
+
+  if (payload.mode === "sendNow") {
+    selectedSendNowFiles = [];
+    latestSendNowRows = Array.isArray(payload.rows) ? payload.rows : [];
+    excludedSendNowRecipientKeys = new Set(payload.excludedRecipientKeys || []);
+    sendNowMessageDraft = payload.messageText || draft.messageText || "";
+    sendNowSearchDraft = payload.searchText || "";
+    sendNowAppliedSearch = payload.searchText || "";
+    restoredSendNowFileName = draft.fileName || "";
+
+    selectedWhatsAppFiles = [];
+    latestWhatsAppRows = [];
+    selectedWhatsAppMonths = new Set();
+    selectedWhatsAppRecipientKeys = new Set();
+
+    showWhatsAppMode("sendNow");
+    renderSelectedSendNowFiles();
+    clearSendNowError();
+
+    if (latestSendNowRows.length > 0) {
+      renderSendNowReport();
+    } else {
+      clearSendNowReport();
+    }
+
+    clearEditDraft();
+    return true;
+  }
+
+  if (payload.mode === "scheduled") {
+    selectedWhatsAppFiles = [];
+    latestWhatsAppRows = Array.isArray(payload.rows) ? payload.rows : [];
+    selectedWhatsAppMonths = new Set(payload.selectedMonths || []);
+    selectedWhatsAppRecipientKeys = new Set(payload.selectedRecipientKeys || []);
+    WhatsAppDisplayFilterMonths = new Set(payload.displayFilterMonths || []);
+    WhatsAppDisplaySearchText = payload.displaySearchText || "";
+    WhatsAppDraftFilterMonths = new Set(payload.displayFilterMonths || []);
+    WhatsAppDraftSearchText = payload.displaySearchText || "";
+
+    WhatsAppFormDraft = {
+      hour: payload.hour || "19",
+      minute: payload.minute || "00",
+      message: payload.messageText || draft.messageText || "",
+    };
+
+    restoredScheduledFileName = draft.fileName || "";
+
+    selectedSendNowFiles = [];
+    latestSendNowRows = [];
+    excludedSendNowRecipientKeys = new Set();
+    sendNowMessageDraft = "";
+
+    showWhatsAppMode("schedule");
+    renderSelectedWhatsAppFiles();
+    clearWhatsAppError();
+
+    if (latestWhatsAppRows.length > 0) {
+      renderWhatsAppReport(latestWhatsAppRows, getRestoredFilesCount(restoredScheduledFileName));
+    } else {
+      clearWhatsAppReport();
+    }
+
+    clearEditDraft();
+    return true;
+  }
+
+  clearEditDraft();
+  return false;
+}
+
+function getRestoredFilesCount(fileName) {
+  if (!fileName) return 1;
+
+  const match = String(fileName).match(/^(\d+) files merged$/i);
+
+  if (match) {
+    return Number(match[1]) || 1;
+  }
+
+  return 1;
 }
 
 
 function handleSendNowFileSelection(event) {
   const incomingFiles = Array.from(event.target.files || []);
+
+  restoredSendNowFileName = "";
 
   if (incomingFiles.length === 0) {
     return;
@@ -687,13 +793,15 @@ function renderSendNowReport() {
         placeholder="Write the WhatsApp message here..."
       >${escapeHtml(sendNowMessageDraft)}</textarea>
 
-      <button
-        id="finalSendNowWhatsAppBtn"
-        type="button"
-        title="Click to save this send-right-now WhatsApp action into history."
-      >
-        Send Right Now
-      </button>
+<button
+  id="finalSendNowWhatsAppBtn"
+  type="button"
+  class="disabled-send-WhatsApp-btn"
+  disabled
+  title="Write a message first before sending."
+>
+  Send Right Now
+</button>
 
       <div id="sendNowSendErrorLabel" class="WhatsApp-error-label WhatsApp-send-error-label"></div>
     </div>
@@ -798,8 +906,35 @@ function attachSendNowMessageEvent() {
   const textarea = document.getElementById("sendNowWhatsAppTextArea");
   if (!textarea) return;
 
-  textarea.addEventListener("input", collectSendNowMessageDraft);
+  textarea.addEventListener("input", () => {
+    collectSendNowMessageDraft();
+    updateSendNowButtonState();
+  });
+
+  updateSendNowButtonState();
 }
+
+
+function updateSendNowButtonState() {
+  const sendBtn = document.getElementById("finalSendNowWhatsAppBtn");
+  const textarea = document.getElementById("sendNowWhatsAppTextArea");
+
+  if (!sendBtn || !textarea) return;
+
+  const hasMessage = textarea.value.trim().length > 0;
+
+  sendBtn.disabled = !hasMessage;
+
+  if (hasMessage) {
+    sendBtn.classList.remove("disabled-send-WhatsApp-btn");
+    sendBtn.title = "Click to save this send-right-now WhatsApp action into history.";
+  } else {
+    sendBtn.classList.add("disabled-send-WhatsApp-btn");
+    sendBtn.title = "Write a message first before sending.";
+  }
+}
+
+
 
 function attachFinalSendNowEvent() {
   const sendBtn = document.getElementById("finalSendNowWhatsAppBtn");
@@ -817,10 +952,11 @@ function attachFinalSendNowEvent() {
       return;
     }
 
-    if (!sendNowMessageDraft.trim()) {
-      showSendNowInlineError("Please write the WhatsApp message before sending.");
-      return;
-    }
+if (!sendNowMessageDraft.trim()) {
+  updateSendNowButtonState();
+  showSendNowInlineError("Please write the WhatsApp message before sending.");
+  return;
+}
 
     clearSendNowInlineError();
 
@@ -836,16 +972,21 @@ function attachFinalSendNowEvent() {
 
     saveSendWhatsAppHistory({
       mode: "sendNow",
-      fileName:
-        selectedSendNowFiles.length === 1
-          ? selectedSendNowFiles[0].name
-          : `${selectedSendNowFiles.length} files merged`,
+      fileName: getSendNowHistoryFileName(),
       selectedMonths: ["Send Right Now"],
       fromNumber,
-      recipients: getDetailedRecipients(finalRows),
-      messageText: sendNowMessageDraft.trim(),
-      sendDateLabel: currentDateTime.dateLabel,
-      sendTimeLabel: currentDateTime.timeLabel,
+recipients: getDetailedRecipients(finalRows),
+excludedRecipients: getDetailedRecipients(getExcludedSendNowRows()),
+messageText: sendNowMessageDraft.trim(),
+sendDateLabel: currentDateTime.dateLabel,
+sendTimeLabel: currentDateTime.timeLabel,
+editPayload: {
+  mode: "sendNow",
+  rows: latestSendNowRows,
+  excludedRecipientKeys: [...excludedSendNowRecipientKeys],
+  messageText: sendNowMessageDraft.trim(),
+  searchText: sendNowAppliedSearch,
+},
     });
 
     alert("Send Right Now WhatsApp action was saved in history successfully.");
@@ -864,6 +1005,12 @@ function getSendNowSelectedSheetRows() {
 function getSendNowFinalRows() {
   return latestSendNowRows.filter(
     (row) => !excludedSendNowRecipientKeys.has(getSendNowRecipientKey(row))
+  );
+}
+
+function getExcludedSendNowRows() {
+  return latestSendNowRows.filter((row) =>
+    excludedSendNowRecipientKeys.has(getSendNowRecipientKey(row))
   );
 }
 
@@ -928,6 +1075,8 @@ function getLebanonTodayDateLabel() {
 
 function handleWhatsAppFileSelection(event) {
   const incomingFiles = Array.from(event.target.files || []);
+
+  restoredScheduledFileName = "";
 
   if (incomingFiles.length === 0) {
     return;
@@ -1866,16 +2015,25 @@ attachTimeValidationEvents();
 
       saveSendWhatsAppHistory({
         mode: "scheduled",
-        fileName:
-          selectedWhatsAppFiles.length === 1
-            ? selectedWhatsAppFiles[0].name
-            : `${selectedWhatsAppFiles.length} files merged`,
+        fileName: getScheduledWhatsAppHistoryFileName(),
         selectedMonths: [...selectedWhatsAppMonths].map(toDisplaySheetName),
         fromNumber,
-        recipients: detailedRecipients,
-        messageText,
-        sendDateLabel: "One month before each selected birthday",
-        sendTimeLabel: `${hour}:${minute}`,
+recipients: detailedRecipients,
+excludedRecipients: getDetailedRecipients(getExcludedScheduledWhatsAppRows()),
+messageText,
+sendDateLabel: "One month before each selected birthday",
+sendTimeLabel: `${hour}:${minute}`,
+editPayload: {
+  mode: "scheduled",
+  rows: latestWhatsAppRows,
+  selectedMonths: [...selectedWhatsAppMonths],
+  selectedRecipientKeys: [...selectedWhatsAppRecipientKeys],
+  hour,
+  minute,
+  messageText,
+  displayFilterMonths: [...WhatsAppDisplayFilterMonths],
+  displaySearchText: WhatsAppDisplaySearchText,
+},
       });
 
       alert("Scheduled WhatsApp action was saved in history successfully.");
@@ -2084,6 +2242,31 @@ function getVisibleWhatsAppRowsForDemo() {
   return rows;
 }
 
+
+function getSendNowHistoryFileName() {
+  if (selectedSendNowFiles.length === 1) {
+    return selectedSendNowFiles[0].name;
+  }
+
+  if (selectedSendNowFiles.length > 1) {
+    return `${selectedSendNowFiles.length} files merged`;
+  }
+
+  return restoredSendNowFileName || "Restored Send Right Now WhatsApp";
+}
+
+function getScheduledWhatsAppHistoryFileName() {
+  if (selectedWhatsAppFiles.length === 1) {
+    return selectedWhatsAppFiles[0].name;
+  }
+
+  if (selectedWhatsAppFiles.length > 1) {
+    return `${selectedWhatsAppFiles.length} files merged`;
+  }
+
+  return restoredScheduledFileName || "Restored Scheduled WhatsApp";
+}
+
 function attachTimeValidationEvents() {
   const hourInput = document.getElementById("WhatsAppHourInput");
   const minuteInput = document.getElementById("WhatsAppMinuteInput");
@@ -2207,6 +2390,14 @@ function getFilteredWhatsAppRows() {
   });
 }
 
+
+function getExcludedScheduledWhatsAppRows() {
+  return getRowsInsideSelectedWhatsAppMonths().filter((row) => {
+    if (!row.phone) return false;
+    return !selectedWhatsAppRecipientKeys.has(getWhatsAppRecipientKey(row));
+  });
+}
+
 function getDetailedRecipients(rows) {
   return rows
     .map((row) => ({
@@ -2216,6 +2407,9 @@ function getDetailedRecipients(rows) {
       dateOfBirth: row.originalDobLabel || "",
       reminderDate: row.reminderDateLabel || "",
       sourceFileName: row.sourceFileName || "",
+      sourceSheetName: row.sourceSheetName || "",
+      rowNumber: row.rowNumber || "",
+      phoneIndex: row.phoneIndex || "",
     }))
     .filter((recipient) => recipient.phone);
 }
