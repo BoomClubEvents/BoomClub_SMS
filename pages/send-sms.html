@@ -1,87 +1,87 @@
 <section class="page-section">
   <div class="container">
-    <div class="send-sms-header">
+    <div class="send-WhatsApp-header">
       <div>
-        <h1>Send SMS</h1>
+        <h1>Send WhatsApp</h1>
         <p>
-          Choose whether you want to schedule birthday reminders or send messages immediately.
+          Choose whether you want to schedule birthday WhatsApp reminders or send messages immediately.
         </p>
       </div>
     </div>
 
     <!-- FIRST SCREEN -->
-    <div id="smsModeChooser" class="sms-mode-chooser">
-      <button id="smsScheduleModeBtn" type="button" class="sms-mode-card">
-        <span class="sms-mode-icon">📅</span>
+    <div id="WhatsAppModeChooser" class="WhatsApp-mode-chooser">
+      <button id="WhatsAppScheduleModeBtn" type="button" class="WhatsApp-mode-card">
+        <span class="WhatsApp-mode-icon">📅</span>
         <strong>Schedule</strong>
         <small>
-          Upload the generated monthly workbook and prepare SMS reminders one month in advance.
+          Upload the generated monthly workbook and prepare WhatsApp reminders one month in advance.
         </small>
       </button>
 
-      <button id="smsSendNowModeBtn" type="button" class="sms-mode-card">
-        <span class="sms-mode-icon">⚡</span>
+      <button id="WhatsAppSendNowModeBtn" type="button" class="WhatsApp-mode-card">
+        <span class="WhatsApp-mode-icon">⚡</span>
         <strong>Send Right Now</strong>
         <small>
-          Send an SMS immediately without using the one-month reminder schedule.
+          Send a WhatsApp message immediately without using the one-month reminder schedule.
         </small>
       </button>
     </div>
 
-    <!-- EXISTING SCHEDULE FLOW -->
-    <div id="smsSchedulePanel" class="sms-mode-panel hidden">
-      <button id="backToSmsModesBtn" type="button" class="sms-back-btn">
+    <!-- SCHEDULE FLOW -->
+    <div id="WhatsAppSchedulePanel" class="WhatsApp-mode-panel hidden">
+      <button id="backToWhatsAppModesBtn" type="button" class="WhatsApp-back-btn">
         ← Back
       </button>
 
-      <div class="send-sms-upload-box">
-        <label class="send-sms-label" for="smsFileInput">
+      <div class="send-WhatsApp-upload-box">
+        <label class="send-WhatsApp-label" for="WhatsAppFileInput">
           Upload Excel file (.xlsx only)
         </label>
 
-        <input type="file" id="smsFileInput" accept=".xlsx" multiple />
+        <input type="file" id="WhatsAppFileInput" accept=".xlsx" multiple />
 
-        <div id="smsSelectedFile" class="sms-selected-file"></div>
+        <div id="WhatsAppSelectedFile" class="WhatsApp-selected-file"></div>
 
-        <div id="smsErrorLabel" class="sms-error-label" aria-live="polite"></div>
+        <div id="WhatsAppErrorLabel" class="WhatsApp-error-label" aria-live="polite"></div>
 
-        <button id="processSmsFileBtn" type="button">
+        <button id="processWhatsAppFileBtn" type="button">
           Process File
         </button>
       </div>
 
-      <div id="smsReportContainer" class="sms-report-container"></div>
+      <div id="WhatsAppReportContainer" class="WhatsApp-report-container"></div>
     </div>
 
-<!-- SEND RIGHT NOW FLOW -->
-<div id="smsSendNowPanel" class="sms-mode-panel hidden">
-  <button id="backToSmsModesFromNowBtn" type="button" class="sms-back-btn">
-    ← Back
-  </button>
+    <!-- SEND RIGHT NOW FLOW -->
+    <div id="WhatsAppSendNowPanel" class="WhatsApp-mode-panel hidden">
+      <button id="backToWhatsAppModesFromNowBtn" type="button" class="WhatsApp-back-btn">
+        ← Back
+      </button>
 
-  <div class="send-sms-upload-box">
-    <h2>Send Right Now</h2>
-    <p class="sms-summary-note">
-      Upload a generated monthly workbook, choose one sheet, exclude people if needed,
-      write the message, and save the SMS action for 19:00 Lebanon time.
-    </p>
+      <div class="send-WhatsApp-upload-box">
+        <h2>Send Right Now</h2>
+        <p class="WhatsApp-summary-note">
+          Upload any Excel file, detect phone numbers, remove people if needed,
+          write the message, and save the WhatsApp action with the current date and time.
+        </p>
 
-    <label class="send-sms-label" for="sendNowFileInput">
-      Upload Excel file (.xlsx only)
-    </label>
+        <label class="send-WhatsApp-label" for="sendNowFileInput">
+          Upload Excel file (.xlsx only)
+        </label>
 
-    <input type="file" id="sendNowFileInput" accept=".xlsx" multiple />
+        <input type="file" id="sendNowFileInput" accept=".xlsx" multiple />
 
-    <div id="sendNowSelectedFile" class="sms-selected-file"></div>
+        <div id="sendNowSelectedFile" class="WhatsApp-selected-file"></div>
 
-    <div id="sendNowErrorLabel" class="sms-error-label" aria-live="polite"></div>
+        <div id="sendNowErrorLabel" class="WhatsApp-error-label" aria-live="polite"></div>
 
-    <button id="processSendNowFileBtn" type="button">
-      Process File
-    </button>
-  </div>
+        <button id="processSendNowFileBtn" type="button">
+          Process File
+        </button>
+      </div>
 
-  <div id="sendNowReportContainer" class="sms-report-container"></div>
-</div>
+      <div id="sendNowReportContainer" class="WhatsApp-report-container"></div>
+    </div>
   </div>
 </section>

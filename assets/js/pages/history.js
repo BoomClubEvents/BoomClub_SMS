@@ -2,7 +2,7 @@ import {
   clearAllHistory,
   getMonthHistory,
   getDateHistory,
-  getSendSmsHistory,
+  getSendWhatsAppHistory,
   saveEditDraft,
 } from "../storage.js";
 import {
@@ -15,7 +15,7 @@ import { formatFullDateTime, getMinutesAgoText } from "../utils.js";
 export function initHistoryPage() {
   renderMonthHistory();
   renderDateHistory();
-  renderSendSmsHistory();
+  renderSendWhatsAppHistory();
   bindHistoryEvents();
   showHistoryHome();
 }
@@ -26,8 +26,8 @@ function bindHistoryEvents() {
   const showDateHistoryBtn = document.getElementById("showDateHistoryBtn");
   const backToHistoryHomeFromMonth = document.getElementById("backToHistoryHomeFromMonth");
   const backToHistoryHomeFromDate = document.getElementById("backToHistoryHomeFromDate");
-  const showSendSmsHistoryBtn = document.getElementById("showSendSmsHistoryBtn");
-  const backToHistoryHomeFromSendSms = document.getElementById("backToHistoryHomeFromSendSms");
+  const showSendWhatsAppHistoryBtn = document.getElementById("showSendWhatsAppHistoryBtn");
+  const backToHistoryHomeFromSendWhatsApp = document.getElementById("backToHistoryHomeFromSendWhatsApp");
 
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener("click", clearHistory);
@@ -49,12 +49,12 @@ function bindHistoryEvents() {
     backToHistoryHomeFromDate.addEventListener("click", showHistoryHome);
   }
 
-  if (showSendSmsHistoryBtn) {
-  showSendSmsHistoryBtn.addEventListener("click", showSendSmsHistoryView);
+  if (showSendWhatsAppHistoryBtn) {
+  showSendWhatsAppHistoryBtn.addEventListener("click", showSendWhatsAppHistoryView);
 }
 
-if (backToHistoryHomeFromSendSms) {
-  backToHistoryHomeFromSendSms.addEventListener("click", showHistoryHome);
+if (backToHistoryHomeFromSendWhatsApp) {
+  backToHistoryHomeFromSendWhatsApp.addEventListener("click", showHistoryHome);
 }
 }
 
@@ -62,48 +62,48 @@ function showHistoryHome() {
   const homeView = document.getElementById("historyHomeView");
   const monthView = document.getElementById("monthHistoryView");
   const dateView = document.getElementById("dateHistoryView");
-  const sendSmsView = document.getElementById("sendSmsHistoryView");
+  const sendWhatsAppView = document.getElementById("sendWhatsAppHistoryView");
 
   if (homeView) homeView.classList.remove("hidden");
   if (monthView) monthView.classList.add("hidden");
   if (dateView) dateView.classList.add("hidden");
-  if (sendSmsView) sendSmsView.classList.add("hidden");
+  if (sendWhatsAppView) sendWhatsAppView.classList.add("hidden");
 }
 
 function showMonthHistoryView() {
   const homeView = document.getElementById("historyHomeView");
   const monthView = document.getElementById("monthHistoryView");
   const dateView = document.getElementById("dateHistoryView");
-  const sendSmsView = document.getElementById("sendSmsHistoryView");
+  const sendWhatsAppView = document.getElementById("sendWhatsAppHistoryView");
 
   if (homeView) homeView.classList.add("hidden");
   if (monthView) monthView.classList.remove("hidden");
   if (dateView) dateView.classList.add("hidden");
-  if (sendSmsView) sendSmsView.classList.add("hidden");
+  if (sendWhatsAppView) sendWhatsAppView.classList.add("hidden");
 }
 
 function showDateHistoryView() {
   const homeView = document.getElementById("historyHomeView");
   const monthView = document.getElementById("monthHistoryView");
   const dateView = document.getElementById("dateHistoryView");
-  const sendSmsView = document.getElementById("sendSmsHistoryView");
+  const sendWhatsAppView = document.getElementById("sendWhatsAppHistoryView");
 
   if (homeView) homeView.classList.add("hidden");
   if (monthView) monthView.classList.add("hidden");
   if (dateView) dateView.classList.remove("hidden");
-  if (sendSmsView) sendSmsView.classList.add("hidden");
+  if (sendWhatsAppView) sendWhatsAppView.classList.add("hidden");
 }
 
-function showSendSmsHistoryView() {
+function showSendWhatsAppHistoryView() {
   const homeView = document.getElementById("historyHomeView");
   const monthView = document.getElementById("monthHistoryView");
   const dateView = document.getElementById("dateHistoryView");
-  const sendSmsView = document.getElementById("sendSmsHistoryView");
+  const sendWhatsAppView = document.getElementById("sendWhatsAppHistoryView");
 
   if (homeView) homeView.classList.add("hidden");
   if (monthView) monthView.classList.add("hidden");
   if (dateView) dateView.classList.add("hidden");
-  if (sendSmsView) sendSmsView.classList.remove("hidden");
+  if (sendWhatsAppView) sendWhatsAppView.classList.remove("hidden");
 }
 
 function renderMonthHistory() {
@@ -163,9 +163,9 @@ function renderDateHistory() {
 }
 
 
-function renderSendSmsHistory() {
-  const container = document.getElementById("historySendSmsContent");
-  const history = getSendSmsHistory();
+function renderSendWhatsAppHistory() {
+  const container = document.getElementById("historySendWhatsAppContent");
+  const history = getSendWhatsAppHistory();
 
   if (!container) return;
 
@@ -174,8 +174,8 @@ function renderSendSmsHistory() {
   if (history.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
-        <strong>No SMS history yet.</strong>
-        <p>Your scheduled or sent SMS actions will appear here.</p>
+        <strong>No WhatsApp history yet.</strong>
+        <p>Your scheduled or sent WhatsApp actions will appear here.</p>
       </div>
     `;
     return;
@@ -185,7 +185,7 @@ function renderSendSmsHistory() {
   list.className = "history-list";
 
   history.forEach((item) => {
-    list.appendChild(createSendSmsHistoryCard(item));
+    list.appendChild(createSendWhatsAppHistoryCard(item));
   });
 
   container.appendChild(list);
@@ -275,9 +275,9 @@ function createHistoryCard(item, mode) {
   return card;
 }
 
-function createSendSmsHistoryCard(item) {
+function createSendWhatsAppHistoryCard(item) {
   const card = document.createElement("div");
-  card.className = "history-file-card sms-history-card";
+  card.className = "history-file-card WhatsApp-history-card";
 
   const modeLabel = item.mode === "sendNow" ? "Send Right Now" : "Scheduled";
 
@@ -328,10 +328,10 @@ function createSendSmsHistoryCard(item) {
     }
 
     <div class="history-title">
-      ${escapeHtml(modeLabel)} SMS
+      ${escapeHtml(modeLabel)} WhatsApp
     </div>
 
-    <div class="sms-history-details">
+    <div class="WhatsApp-history-details">
       <p><strong>File:</strong> ${escapeHtml(item.fileName || "Not specified")}</p>
       <p><strong>Selected month(s):</strong> ${escapeHtml(selectedMonths)}</p>
       <p><strong>From:</strong> ${escapeHtml(item.fromNumber || "Not specified")}</p>
@@ -341,7 +341,7 @@ function createSendSmsHistoryCard(item) {
       <p><strong>Total recipients:</strong> ${recipients.length}</p>
     </div>
 
-    <div class="sms-history-recipients">
+    <div class="WhatsApp-history-recipients">
       <strong>Recipients</strong>
       <ul>
         ${recipientsPreview}
@@ -528,6 +528,6 @@ function clearHistory() {
   clearAllHistory();
   renderMonthHistory();
   renderDateHistory();
-  renderSendSmsHistory();
+  renderSendWhatsAppHistory();
   alert("History cleared successfully.");
 }

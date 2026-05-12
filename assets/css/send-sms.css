@@ -1,14 +1,14 @@
-.send-sms-header {
+.send-WhatsApp-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 20px;
 }
 
-.send-sms-upload-box,
-.sms-summary-box,
-.sms-form-box,
-.sms-filtered-summary-box {
+.send-WhatsApp-upload-box,
+.WhatsApp-summary-box,
+.WhatsApp-form-box,
+.WhatsApp-filtered-summary-box {
   margin-top: 24px;
   background: #FFF8E1;
   border: 1px solid #FFE08A;
@@ -16,27 +16,27 @@
   padding: 20px;
 }
 
-.send-sms-label,
-.send-sms-small-label {
+.send-WhatsApp-label,
+.send-WhatsApp-small-label {
   display: block;
   font-weight: 600;
   color: #A61B1B;
 }
 
-.send-sms-label {
+.send-WhatsApp-label {
   margin-bottom: 10px;
 }
 
-.send-sms-small-label {
+.send-WhatsApp-small-label {
   margin-bottom: 8px;
   font-size: 14px;
 }
 
-.sms-selected-file {
+.WhatsApp-selected-file {
   margin-top: 14px;
 }
 
-.sms-file-pill {
+.WhatsApp-file-pill {
   background: #FFF3C4;
   border: 1px solid #FFE08A;
   border-radius: 10px;
@@ -44,7 +44,7 @@
   color: #5C3A00;
 }
 
-.sms-error-label {
+.WhatsApp-error-label {
   display: none;
   margin-top: 14px;
   padding: 12px 14px;
@@ -56,26 +56,26 @@
   line-height: 1.5;
 }
 
-.sms-error-label.show {
+.WhatsApp-error-label.show {
   display: block;
 }
 
-.sms-report-container {
+.WhatsApp-report-container {
   margin-top: 30px;
 }
 
-.sms-summary-note {
+.WhatsApp-summary-note {
   margin-bottom: 0;
 }
 
-.sms-report-grid {
+.WhatsApp-report-grid {
   margin-top: 22px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.sms-report-card {
+.WhatsApp-report-card {
   background: white;
   border: 1px solid #FFE08A;
   border-radius: 16px;
@@ -83,27 +83,27 @@
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
 }
 
-.sms-report-card h3 {
+.WhatsApp-report-card h3 {
   margin-bottom: 12px;
   color: #A61B1B;
 }
 
-.sms-report-card p {
+.WhatsApp-report-card p {
   margin-bottom: 8px;
 }
 
-.sms-time-grid {
+.WhatsApp-time-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-top: 10px;
 }
 
-.sms-time-grid input {
+.WhatsApp-time-grid input {
   width: 100%;
 }
 
-.sms-textarea {
+.WhatsApp-textarea {
   width: 100%;
   min-height: 180px;
   margin-top: 10px;
@@ -116,56 +116,56 @@
   background: white;
 }
 
-.sms-textarea:focus,
-.sms-time-grid input:focus {
+.WhatsApp-textarea:focus,
+.WhatsApp-time-grid input:focus {
   outline: none;
   border-color: #D62828;
   box-shadow: 0 0 0 3px rgba(214, 40, 40, 0.12);
 }
 
-.sms-actions {
+.WhatsApp-actions {
   margin-top: 18px;
 }
 
-.disabled-send-sms-btn {
+.disabled-send-WhatsApp-btn {
   width: 100%;
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.disabled-send-sms-btn:hover {
+.disabled-send-WhatsApp-btn:hover {
   background: #D62828;
   transform: none;
 }
 
-.sms-disabled-note {
+.WhatsApp-disabled-note {
   margin-top: 12px;
   font-size: 14px;
   color: #777;
 }
 
-.sms-send-error-label {
+.WhatsApp-send-error-label {
   margin-top: 12px;
 }
 
-.sms-file-name {
+.WhatsApp-file-name {
   cursor: pointer;
   text-decoration: underline;
   color: #A61B1B;
 }
 
-.sms-file-name:hover {
+.WhatsApp-file-name:hover {
   color: #D62828;
 }
 
-.sms-selected-files-list {
+.WhatsApp-selected-files-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-top: 14px;
 }
 
-.sms-file-pill {
+.WhatsApp-file-pill {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -173,7 +173,7 @@
   flex-wrap: wrap;
 }
 
-.sms-file-pill-left {
+.WhatsApp-file-pill-left {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -181,19 +181,19 @@
   flex-wrap: wrap;
 }
 
-.sms-file-pill-actions {
+.WhatsApp-file-pill-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.sms-small-action-btn,
-.sms-small-remove-btn,
-.sms-preview-all-btn {
+.WhatsApp-small-action-btn,
+.WhatsApp-small-remove-btn,
+.WhatsApp-preview-all-btn {
   margin-top: 0;
 }
 
-.sms-small-remove-btn {
+.WhatsApp-small-remove-btn {
   min-width: 38px;
   width: 38px;
   height: 38px;
@@ -201,34 +201,34 @@
   border-radius: 50%;
 }
 
-.sms-preview-all-btn {
+.WhatsApp-preview-all-btn {
   margin-top: 14px;
 }
 
-.sms-file-name {
+.WhatsApp-file-name {
   cursor: pointer;
   text-decoration: underline;
   color: #A61B1B;
   word-break: break-word;
 }
 
-.sms-file-name:hover {
+.WhatsApp-file-name:hover {
   color: #D62828;
 }
 
-.sms-error-list {
+.WhatsApp-error-list {
   margin: 10px 0 0;
   padding-left: 20px;
 }
 
-.sms-month-count-grid {
+.WhatsApp-month-count-grid {
   margin-top: 22px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
-.sms-month-count-box {
+.WhatsApp-month-count-box {
   background: #FFF8E1;
   border: 1px solid #FFE08A;
   border-radius: 12px;
@@ -238,13 +238,13 @@
   gap: 8px;
 }
 
-.sms-month-count-box strong {
+.WhatsApp-month-count-box strong {
   color: #A61B1B;
 }
 
 /* NEW */
 
-.sms-month-selection-toolbar {
+.WhatsApp-month-selection-toolbar {
   margin-top: 24px;
   display: flex;
   justify-content: space-between;
@@ -253,17 +253,17 @@
   flex-wrap: wrap;
 }
 
-.sms-month-selection-info {
+.WhatsApp-month-selection-info {
   color: #5C3A00;
 }
 
-.sms-month-selection-actions {
+.WhatsApp-month-selection-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.sms-toolbar-btn {
+.WhatsApp-toolbar-btn {
   padding: 10px 14px;
   border: 1px solid #FFE08A;
   border-radius: 10px;
@@ -274,52 +274,52 @@
   transition: 0.2s ease;
 }
 
-.sms-toolbar-btn:hover {
+.WhatsApp-toolbar-btn:hover {
   background: #fff3c4;
 }
 
-.sms-toolbar-btn-secondary {
+.WhatsApp-toolbar-btn-secondary {
   background: #fff8e1;
 }
 
-.sms-month-count-box.sms-month-selectable {
+.WhatsApp-month-count-box.WhatsApp-month-selectable {
   width: 100%;
   text-align: left;
   cursor: pointer;
   transition: 0.2s ease;
 }
 
-.sms-month-count-box.sms-month-selectable:hover {
+.WhatsApp-month-count-box.WhatsApp-month-selectable:hover {
   transform: translateY(-2px);
   border-color: #D62828;
   box-shadow: 0 8px 18px rgba(214, 40, 40, 0.08);
 }
 
-.sms-month-count-box.sms-month-selectable.selected {
+.WhatsApp-month-count-box.WhatsApp-month-selectable.selected {
   background: #FFECC2;
   border: 2px solid #D62828;
   box-shadow: 0 10px 22px rgba(214, 40, 40, 0.12);
 }
 
-.sms-month-count-box small {
+.WhatsApp-month-count-box small {
   font-size: 12px;
   color: #7A5A00;
 }
 
-.sms-month-disabled {
+.WhatsApp-month-disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-.sms-filtered-summary-box {
+.WhatsApp-filtered-summary-box {
   margin-top: 20px;
 }
 
-.sms-filtered-summary-box p {
+.WhatsApp-filtered-summary-box p {
   margin: 0;
 }
 
-.sms-empty-selection-state {
+.WhatsApp-empty-selection-state {
   grid-column: 1 / -1;
   background: #FFF8E1;
   border: 1px dashed #FFE08A;
@@ -334,7 +334,7 @@
   display: none !important;
 }
 
-.sms-mode-chooser {
+.WhatsApp-mode-chooser {
   min-height: 55vh;
   margin-top: 32px;
   display: grid;
@@ -343,7 +343,7 @@
   align-items: stretch;
 }
 
-.sms-mode-card {
+.WhatsApp-mode-card {
   width: 100%;
   min-height: 320px;
   border: 2px solid #FFE08A;
@@ -362,42 +362,42 @@
   box-shadow: 0 14px 35px rgba(0, 0, 0, 0.06);
 }
 
-.sms-mode-card:hover {
+.WhatsApp-mode-card:hover {
   transform: translateY(-5px);
   border-color: #D62828;
   background: #FFECC2;
   box-shadow: 0 18px 42px rgba(214, 40, 40, 0.13);
 }
 
-.sms-mode-icon {
+.WhatsApp-mode-icon {
   font-size: 58px;
   line-height: 1;
 }
 
-.sms-mode-card strong {
+.WhatsApp-mode-card strong {
   font-size: 30px;
   font-weight: 800;
 }
 
-.sms-mode-card small {
+.WhatsApp-mode-card small {
   max-width: 420px;
   color: #5C3A00;
   font-size: 16px;
   line-height: 1.6;
 }
 
-.sms-mode-panel {
+.WhatsApp-mode-panel {
   margin-top: 24px;
 }
 
-.sms-back-btn {
+.WhatsApp-back-btn {
   margin-bottom: 18px;
   background: #FFF8E1;
   color: #A61B1B;
   border: 1px solid #FFE08A;
 }
 
-.sms-back-btn:hover {
+.WhatsApp-back-btn:hover {
   background: #FFECC2;
 }
 
@@ -453,7 +453,7 @@
   text-decoration: line-through;
 }
 
-.sms-people-selection-toolbar {
+.WhatsApp-people-selection-toolbar {
   background: #FFF8E1;
   border: 1px solid #FFE08A;
   border-radius: 16px;
@@ -461,7 +461,7 @@
 }
 
 
-.sms-demo-filter-box {
+.WhatsApp-demo-filter-box {
   margin-top: 22px;
   background: #FFF8E1;
   border: 1px solid #FFE08A;
@@ -469,7 +469,7 @@
   padding: 18px;
 }
 
-.sms-demo-filter-header {
+.WhatsApp-demo-filter-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -477,17 +477,17 @@
   flex-wrap: wrap;
 }
 
-.sms-demo-filter-header h3 {
+.WhatsApp-demo-filter-header h3 {
   margin: 0 0 6px;
   color: #A61B1B;
 }
 
-.sms-demo-filter-header p {
+.WhatsApp-demo-filter-header p {
   margin: 0;
   color: #5C3A00;
 }
 
-.sms-filter-dropdown {
+.WhatsApp-filter-dropdown {
   margin-top: 16px;
   background: white;
   border: 1px solid #FFE08A;
@@ -495,7 +495,7 @@
   padding: 12px 14px;
 }
 
-.sms-filter-dropdown summary {
+.WhatsApp-filter-dropdown summary {
   cursor: pointer;
   color: #A61B1B;
   font-weight: 700;
@@ -504,19 +504,19 @@
   gap: 12px;
 }
 
-.sms-filter-dropdown summary span {
+.WhatsApp-filter-dropdown summary span {
   color: #5C3A00;
   font-weight: 500;
 }
 
-.sms-filter-month-grid {
+.WhatsApp-filter-month-grid {
   margin-top: 14px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
-.sms-filter-month-option {
+.WhatsApp-filter-month-option {
   background: #FFF8E1;
   border: 1px solid #FFE08A;
   border-radius: 10px;
@@ -529,15 +529,15 @@
   gap: 8px;
 }
 
-.sms-filter-month-option:hover {
+.WhatsApp-filter-month-option:hover {
   background: #FFECC2;
 }
 
-.sms-demo-search-row {
+.WhatsApp-demo-search-row {
   margin-top: 16px;
 }
 
-.sms-demo-search-input {
+.WhatsApp-demo-search-input {
   width: 100%;
   padding: 13px 15px;
   border: 1px solid #FFE08A;
@@ -547,13 +547,13 @@
   color: #2B2B2B;
 }
 
-.sms-demo-search-input:focus {
+.WhatsApp-demo-search-input:focus {
   outline: none;
   border-color: #D62828;
   box-shadow: 0 0 0 3px rgba(214, 40, 40, 0.12);
 }
 
-.sms-demo-filter-result {
+.WhatsApp-demo-filter-result {
   margin-top: 14px;
   color: #5C3A00;
   background: #fff;
@@ -563,13 +563,13 @@
 }
 
 
-.sms-demo-filter-actions {
+.WhatsApp-demo-filter-actions {
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
 }
 
-.sms-demo-filter-actions .sms-toolbar-btn {
+.WhatsApp-demo-filter-actions .WhatsApp-toolbar-btn {
   min-width: 160px;
 }
 
@@ -597,71 +597,71 @@
 
 
 @media (max-width: 1100px) {
-  .sms-month-count-grid {
+  .WhatsApp-month-count-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 900px) {
-  .sms-report-grid {
+  .WhatsApp-report-grid {
     grid-template-columns: 1fr;
   }
 
-  .sms-month-count-grid {
+  .WhatsApp-month-count-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .sms-time-grid {
+  .WhatsApp-time-grid {
     grid-template-columns: 1fr;
   }
 
 
 
-  .sms-mode-chooser {
+  .WhatsApp-mode-chooser {
     grid-template-columns: 1fr;
   }
 
-  .sms-mode-card {
+  .WhatsApp-mode-card {
     min-height: 240px;
   }
 
-  .sms-filter-month-grid {
+  .WhatsApp-filter-month-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 560px) {
-  .sms-month-count-grid {
+  .WhatsApp-month-count-grid {
     grid-template-columns: 1fr;
   }
 
-  .sms-month-selection-toolbar {
+  .WhatsApp-month-selection-toolbar {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .sms-month-selection-actions {
+  .WhatsApp-month-selection-actions {
     width: 100%;
     flex-direction: column;
   }
 
-  .sms-toolbar-btn {
+  .WhatsApp-toolbar-btn {
     width: 100%;
   }
 
-    .sms-filter-month-grid {
+    .WhatsApp-filter-month-grid {
     grid-template-columns: 1fr;
   }
 
-  .sms-filter-dropdown summary {
+  .WhatsApp-filter-dropdown summary {
     flex-direction: column;
   }
 
-    .sms-demo-filter-actions {
+    .WhatsApp-demo-filter-actions {
     justify-content: stretch;
   }
 
-  .sms-demo-filter-actions .sms-toolbar-btn {
+  .WhatsApp-demo-filter-actions .WhatsApp-toolbar-btn {
     width: 100%;
   }
 }

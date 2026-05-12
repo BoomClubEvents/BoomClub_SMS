@@ -2,7 +2,7 @@ import { initDashboardPage } from "./pages/dashboard.js";
 import { initFilterByMonthPage } from "./pages/filterByMonth.js";
 import { initFilterByDatePage } from "./pages/filterByDate.js";
 import { initHistoryPage } from "./pages/history.js";
-import { initSendSmsPage } from "./pages/sendSms.js";
+import { initSendWhatsAppPage } from "./pages/sendSms.js";
 
 const pageContent = () => document.getElementById("pageContent");
 const sidebar = () => document.getElementById("sidebar");
@@ -28,7 +28,7 @@ const pageConfig = {
   },
   "send-sms": {
     htmlPath: "./pages/send-sms.html",
-    init: initSendSmsPage,
+    init: initSendWhatsAppPage,
   },
 };
 

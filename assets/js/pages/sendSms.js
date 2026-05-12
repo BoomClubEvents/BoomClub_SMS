@@ -1,5 +1,5 @@
 import { openFilePreview, openStoredFilesPreview } from "../previewModal.js";
-import { saveSendSmsHistory } from "../storage.js";
+import { saveSendWhatsAppHistory } from "../storage.js";
 import { buildCleanPersonRow } from "../utils.js";
 
 
@@ -19,22 +19,22 @@ const REQUIRED_SHEETS = [
   "not specified",
 ];
 
-const SELECTABLE_SMS_MONTHS = REQUIRED_SHEETS.filter(
+const SELECTABLE_WhatsApp_MONTHS = REQUIRED_SHEETS.filter(
   (sheet) => sheet !== "not specified"
 );
 
-let selectedSmsFiles = [];
-let latestSmsRows = [];
-let selectedSmsMonths = new Set();
-let selectedSmsRecipientKeys = new Set();
+let selectedWhatsAppFiles = [];
+let latestWhatsAppRows = [];
+let selectedWhatsAppMonths = new Set();
+let selectedWhatsAppRecipientKeys = new Set();
 
-let smsDisplayFilterMonths = new Set();
-let smsDisplaySearchText = "";
+let WhatsAppDisplayFilterMonths = new Set();
+let WhatsAppDisplaySearchText = "";
 
-let smsDraftFilterMonths = new Set();
-let smsDraftSearchText = "";
+let WhatsAppDraftFilterMonths = new Set();
+let WhatsAppDraftSearchText = "";
 
-let smsFormDraft = {
+let WhatsAppFormDraft = {
   hour: "19",
   minute: "00",
   message: "",
@@ -52,29 +52,29 @@ let sendNowAppliedSearch = "";
 
 
 
-export function initSendSmsPage() {
-  const fileInput = document.getElementById("smsFileInput");
-  const processBtn = document.getElementById("processSmsFileBtn");
+export function initSendWhatsAppPage() {
+  const fileInput = document.getElementById("WhatsAppFileInput");
+  const processBtn = document.getElementById("processWhatsAppFileBtn");
 
   const sendNowFileInput = document.getElementById("sendNowFileInput");
   const processSendNowBtn = document.getElementById("processSendNowFileBtn");
 
-  const modeChooser = document.getElementById("smsModeChooser");
-  const schedulePanel = document.getElementById("smsSchedulePanel");
-  const sendNowPanel = document.getElementById("smsSendNowPanel");
+  const modeChooser = document.getElementById("WhatsAppModeChooser");
+  const schedulePanel = document.getElementById("WhatsAppSchedulePanel");
+  const sendNowPanel = document.getElementById("WhatsAppSendNowPanel");
 
-  const scheduleModeBtn = document.getElementById("smsScheduleModeBtn");
-  const sendNowModeBtn = document.getElementById("smsSendNowModeBtn");
+  const scheduleModeBtn = document.getElementById("WhatsAppScheduleModeBtn");
+  const sendNowModeBtn = document.getElementById("WhatsAppSendNowModeBtn");
 
-  const backToSmsModesBtn = document.getElementById("backToSmsModesBtn");
-  const backToSmsModesFromNowBtn = document.getElementById("backToSmsModesFromNowBtn");
+  const backToWhatsAppModesBtn = document.getElementById("backToWhatsAppModesBtn");
+  const backToWhatsAppModesFromNowBtn = document.getElementById("backToWhatsAppModesFromNowBtn");
 
   if (fileInput) {
-    fileInput.addEventListener("change", handleSmsFileSelection);
+    fileInput.addEventListener("change", handleWhatsAppFileSelection);
   }
 
   if (processBtn) {
-    processBtn.addEventListener("click", handleProcessSmsFiles);
+    processBtn.addEventListener("click", handleProcessWhatsAppFiles);
   }
 
   if (sendNowFileInput) {
@@ -87,32 +87,32 @@ if (processSendNowBtn) {
 
   if (scheduleModeBtn) {
     scheduleModeBtn.addEventListener("click", () => {
-      showSmsMode("schedule");
+      showWhatsAppMode("schedule");
     });
   }
 
 if (sendNowModeBtn) {
   sendNowModeBtn.addEventListener("click", () => {
-    showSmsMode("sendNow");
+    showWhatsAppMode("sendNow");
     renderSelectedSendNowFiles();
     clearSendNowError();
     clearSendNowReport();
   });
 }
 
-  if (backToSmsModesBtn) {
-    backToSmsModesBtn.addEventListener("click", () => {
-      showSmsMode("chooser");
+  if (backToWhatsAppModesBtn) {
+    backToWhatsAppModesBtn.addEventListener("click", () => {
+      showWhatsAppMode("chooser");
     });
   }
 
-  if (backToSmsModesFromNowBtn) {
-    backToSmsModesFromNowBtn.addEventListener("click", () => {
-      showSmsMode("chooser");
+  if (backToWhatsAppModesFromNowBtn) {
+    backToWhatsAppModesFromNowBtn.addEventListener("click", () => {
+      showWhatsAppMode("chooser");
     });
   }
 
-  function showSmsMode(mode) {
+  function showWhatsAppMode(mode) {
     if (modeChooser) modeChooser.classList.add("hidden");
     if (schedulePanel) schedulePanel.classList.add("hidden");
     if (sendNowPanel) sendNowPanel.classList.add("hidden");
@@ -132,11 +132,11 @@ if (sendNowModeBtn) {
     }
   }
 
-  showSmsMode("chooser");
+  showWhatsAppMode("chooser");
 
-  renderSelectedSmsFiles();
-  clearSmsError();
-  clearSmsReport();
+  renderSelectedWhatsAppFiles();
+  clearWhatsAppError();
+  clearWhatsAppReport();
 }
 
 
@@ -178,21 +178,21 @@ function renderSelectedSendNowFiles() {
   }
 
   const listWrapper = document.createElement("div");
-  listWrapper.className = "sms-selected-files-list";
+  listWrapper.className = "WhatsApp-selected-files-list";
 
   selectedSendNowFiles.forEach((file, index) => {
     const row = document.createElement("div");
-    row.className = "sms-file-pill";
+    row.className = "WhatsApp-file-pill";
 
     const leftSide = document.createElement("div");
-    leftSide.className = "sms-file-pill-left";
+    leftSide.className = "WhatsApp-file-pill-left";
 
     const label = document.createElement("strong");
     label.textContent = `Selected file ${index + 1}: `;
 
     const fileName = document.createElement("span");
     fileName.textContent = file.name;
-    fileName.className = "sms-file-name";
+    fileName.className = "WhatsApp-file-name";
     fileName.title = "Click to preview this file";
     fileName.addEventListener("click", async () => {
       try {
@@ -206,11 +206,11 @@ function renderSelectedSendNowFiles() {
     leftSide.appendChild(fileName);
 
     const rightSide = document.createElement("div");
-    rightSide.className = "sms-file-pill-actions";
+    rightSide.className = "WhatsApp-file-pill-actions";
 
     const previewBtn = document.createElement("button");
     previewBtn.type = "button";
-    previewBtn.className = "sms-small-action-btn";
+    previewBtn.className = "WhatsApp-small-action-btn";
     previewBtn.textContent = "Preview";
     previewBtn.addEventListener("click", async () => {
       try {
@@ -222,7 +222,7 @@ function renderSelectedSendNowFiles() {
 
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
-    removeBtn.className = "sms-small-remove-btn";
+    removeBtn.className = "WhatsApp-small-remove-btn";
     removeBtn.textContent = "✕";
     removeBtn.title = "Remove file";
     removeBtn.addEventListener("click", () => {
@@ -376,7 +376,7 @@ function extractSendNowRowsFromMultipleWorkbooks(fileWorkbooks) {
   const rows = [];
 
   fileWorkbooks.forEach(({ fileName, workbook }) => {
-    SELECTABLE_SMS_MONTHS.forEach((sheetName) => {
+    SELECTABLE_WhatsApp_MONTHS.forEach((sheetName) => {
       const actualSheetName = workbook.SheetNames.find(
         (name) => normalizeSheetName(name) === sheetName
       );
@@ -459,7 +459,7 @@ function extractSendNowRowsFromRandomWorkbook(fileName, workbook) {
         return;
       }
 
-      const birthdayMonthName = SELECTABLE_SMS_MONTHS[parsedDob.getMonth()];
+      const birthdayMonthName = SELECTABLE_WhatsApp_MONTHS[parsedDob.getMonth()];
 
       rows.push({
         name,
@@ -564,7 +564,7 @@ function renderSendNowReport() {
             const isExcluded = excludedSendNowRecipientKeys.has(key);
 
             return `
-              <div class="sms-report-card send-now-person-card ${
+              <div class="WhatsApp-report-card send-now-person-card ${
                 isExcluded ? "send-now-excluded" : ""
               }">
                 <div>
@@ -586,8 +586,8 @@ function renderSendNowReport() {
 
                 <button
                   type="button"
-                  class="sms-toolbar-btn ${
-                    isExcluded ? "sms-toolbar-btn-secondary" : ""
+                  class="WhatsApp-toolbar-btn ${
+                    isExcluded ? "WhatsApp-toolbar-btn-secondary" : ""
                   }"
                   data-send-now-recipient-key="${escapeHtml(key)}"
                 >
@@ -598,25 +598,25 @@ function renderSendNowReport() {
           })
           .join("")
       : `
-        <div class="empty-state sms-empty-selection-state">
+        <div class="empty-state WhatsApp-empty-selection-state">
           <strong>No people match this search.</strong>
           <p>Try another name, phone number, file name, or sheet name.</p>
         </div>
       `;
 
   container.innerHTML = `
-    <div class="sms-summary-box">
+    <div class="WhatsApp-summary-box">
       <h2>Send Right Now Report</h2>
       <p>
         The system scanned the uploaded file(s), detected phone numbers, and listed them below.
         Date of birth is ignored in this mode.
       </p>
-      <p class="sms-summary-note">
+      <p class="WhatsApp-summary-note">
         This action will be saved with the current date and current time.
       </p>
     </div>
 
-    <div class="sms-filtered-summary-box">
+    <div class="WhatsApp-filtered-summary-box">
       <p>
         Total detected numbers:
         <strong>${latestSendNowRows.length}</strong>
@@ -631,8 +631,8 @@ function renderSendNowReport() {
       </p>
     </div>
 
-    <div class="sms-demo-filter-box">
-      <div class="sms-demo-filter-header">
+    <div class="WhatsApp-demo-filter-box">
+      <div class="WhatsApp-demo-filter-header">
         <div>
           <h3>Search the list</h3>
           <p>
@@ -640,62 +640,62 @@ function renderSendNowReport() {
           </p>
         </div>
 
-        <button type="button" id="sendNowClearSearchBtn" class="sms-toolbar-btn sms-toolbar-btn-secondary">
+        <button type="button" id="sendNowClearSearchBtn" class="WhatsApp-toolbar-btn WhatsApp-toolbar-btn-secondary">
           Clear Search
         </button>
       </div>
 
-      <div class="sms-demo-search-row">
-        <label class="send-sms-label" for="sendNowSearchInput">
+      <div class="WhatsApp-demo-search-row">
+        <label class="send-WhatsApp-label" for="sendNowSearchInput">
           Search
         </label>
 
         <input
           id="sendNowSearchInput"
           type="text"
-          class="sms-demo-search-input"
+          class="WhatsApp-demo-search-input"
           placeholder="Example: Mia, 96135, Book1, Sheet1..."
           value="${escapeHtml(sendNowSearchDraft)}"
         />
       </div>
 
-      <div class="sms-demo-filter-actions">
-        <button type="button" id="sendNowApplySearchBtn" class="sms-toolbar-btn">
+      <div class="WhatsApp-demo-filter-actions">
+        <button type="button" id="sendNowApplySearchBtn" class="WhatsApp-toolbar-btn">
           Apply Search
         </button>
       </div>
 
-      <div class="sms-demo-filter-result">
+      <div class="WhatsApp-demo-filter-result">
         Showing <strong>${visibleRows.length}</strong> number(s) from
         <strong>${latestSendNowRows.length}</strong> detected number(s).
         Final recipients still remain <strong>${finalRows.length}</strong>.
       </div>
     </div>
 
-    <div class="sms-report-grid send-now-people-grid">
+    <div class="WhatsApp-report-grid send-now-people-grid">
       ${peopleHtml}
     </div>
 
-    <div class="sms-form-box">
-      <label class="send-sms-label" for="sendNowSmsTextArea">
+    <div class="WhatsApp-form-box">
+      <label class="send-WhatsApp-label" for="sendNowWhatsAppTextArea">
         The text going to be sent is:
       </label>
 
       <textarea
-        id="sendNowSmsTextArea"
-        class="sms-textarea"
-        placeholder="Write the SMS message here..."
+        id="sendNowWhatsAppTextArea"
+        class="WhatsApp-textarea"
+        placeholder="Write the WhatsApp message here..."
       >${escapeHtml(sendNowMessageDraft)}</textarea>
 
       <button
-        id="finalSendNowSmsBtn"
+        id="finalSendNowWhatsAppBtn"
         type="button"
-        title="Click to save this send-right-now SMS action into history."
+        title="Click to save this send-right-now WhatsApp action into history."
       >
         Send Right Now
       </button>
 
-      <div id="sendNowSendErrorLabel" class="sms-error-label sms-send-error-label"></div>
+      <div id="sendNowSendErrorLabel" class="WhatsApp-error-label WhatsApp-send-error-label"></div>
     </div>
   `;
 
@@ -758,22 +758,22 @@ function getVisibleSendNowRows() {
   });
 }
 
-function attachSendNowSheetEvents() {
-  document.querySelectorAll("[data-send-now-sheet]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const sheet = normalizeSheetName(button.dataset.sendNowSheet || "");
-      const counts = getSheetCounts(latestSendNowRows);
+// function attachSendNowSheetEvents() {
+//   document.querySelectorAll("[data-send-now-sheet]").forEach((button) => {
+//     button.addEventListener("click", () => {
+//       const sheet = normalizeSheetName(button.dataset.sendNowSheet || "");
+//       const counts = getSheetCounts(latestSendNowRows);
 
-      if (!sheet || !SELECTABLE_SMS_MONTHS.includes(sheet)) return;
-      if ((counts[sheet] || 0) === 0) return;
+//       if (!sheet || !SELECTABLE_WhatsApp_MONTHS.includes(sheet)) return;
+//       if ((counts[sheet] || 0) === 0) return;
 
-      collectSendNowMessageDraft();
-      selectedSendNowSheet = sheet;
-      excludedSendNowRecipientKeys = new Set();
-      renderSendNowReport();
-    });
-  });
-}
+//       collectSendNowMessageDraft();
+//       selectedSendNowSheet = sheet;
+//       excludedSendNowRecipientKeys = new Set();
+//       renderSendNowReport();
+//     });
+//   });
+// }
 
 function attachSendNowExcludeEvents() {
   document.querySelectorAll("[data-send-now-recipient-key]").forEach((button) => {
@@ -795,14 +795,14 @@ function attachSendNowExcludeEvents() {
 }
 
 function attachSendNowMessageEvent() {
-  const textarea = document.getElementById("sendNowSmsTextArea");
+  const textarea = document.getElementById("sendNowWhatsAppTextArea");
   if (!textarea) return;
 
   textarea.addEventListener("input", collectSendNowMessageDraft);
 }
 
 function attachFinalSendNowEvent() {
-  const sendBtn = document.getElementById("finalSendNowSmsBtn");
+  const sendBtn = document.getElementById("finalSendNowWhatsAppBtn");
   if (!sendBtn) return;
 
   sendBtn.addEventListener("click", () => {
@@ -818,7 +818,7 @@ function attachFinalSendNowEvent() {
     }
 
     if (!sendNowMessageDraft.trim()) {
-      showSendNowInlineError("Please write the SMS message before sending.");
+      showSendNowInlineError("Please write the WhatsApp message before sending.");
       return;
     }
 
@@ -827,14 +827,14 @@ function attachFinalSendNowEvent() {
     const currentDateTime = getLebanonCurrentDateTimeLabels();
 
     const confirmed = confirm(
-      `Are you sure you want to send this SMS right now to ${finalRows.length} people?`
+      `Are you sure you want to send this WhatsApp message right now to ${finalRows.length} people?`
     );
 
     if (!confirmed) return;
 
     const fromNumber = "+96170000000"; // replace later with your real connected number
 
-    saveSendSmsHistory({
+    saveSendWhatsAppHistory({
       mode: "sendNow",
       fileName:
         selectedSendNowFiles.length === 1
@@ -848,12 +848,12 @@ function attachFinalSendNowEvent() {
       sendTimeLabel: currentDateTime.timeLabel,
     });
 
-    alert("Send Right Now SMS action was saved in history successfully.");
+    alert("Send Right Now WhatsApp action was saved in history successfully.");
   });
 }
 
 function collectSendNowMessageDraft() {
-  const textarea = document.getElementById("sendNowSmsTextArea");
+  const textarea = document.getElementById("sendNowWhatsAppTextArea");
   sendNowMessageDraft = textarea ? textarea.value : sendNowMessageDraft;
 }
 
@@ -926,7 +926,7 @@ function getLebanonTodayDateLabel() {
 
 
 
-function handleSmsFileSelection(event) {
+function handleWhatsAppFileSelection(event) {
   const incomingFiles = Array.from(event.target.files || []);
 
   if (incomingFiles.length === 0) {
@@ -934,7 +934,7 @@ function handleSmsFileSelection(event) {
   }
 
   incomingFiles.forEach((file) => {
-    const alreadyExists = selectedSmsFiles.some(
+    const alreadyExists = selectedWhatsAppFiles.some(
       (existingFile) =>
         existingFile.name === file.name &&
         existingFile.size === file.size &&
@@ -942,43 +942,43 @@ function handleSmsFileSelection(event) {
     );
 
     if (!alreadyExists) {
-      selectedSmsFiles.push(file);
+      selectedWhatsAppFiles.push(file);
     }
   });
 
   event.target.value = "";
 
-  clearSmsError();
-  clearSmsReport();
-  renderSelectedSmsFiles();
+  clearWhatsAppError();
+  clearWhatsAppReport();
+  renderSelectedWhatsAppFiles();
 }
 
-function renderSelectedSmsFiles() {
-  const selectedFileEl = document.getElementById("smsSelectedFile");
+function renderSelectedWhatsAppFiles() {
+  const selectedFileEl = document.getElementById("WhatsAppSelectedFile");
   if (!selectedFileEl) return;
 
   selectedFileEl.innerHTML = "";
 
-  if (selectedSmsFiles.length === 0) {
+  if (selectedWhatsAppFiles.length === 0) {
     return;
   }
 
   const listWrapper = document.createElement("div");
-  listWrapper.className = "sms-selected-files-list";
+  listWrapper.className = "WhatsApp-selected-files-list";
 
-  selectedSmsFiles.forEach((file, index) => {
+  selectedWhatsAppFiles.forEach((file, index) => {
     const row = document.createElement("div");
-    row.className = "sms-file-pill";
+    row.className = "WhatsApp-file-pill";
 
     const leftSide = document.createElement("div");
-    leftSide.className = "sms-file-pill-left";
+    leftSide.className = "WhatsApp-file-pill-left";
 
     const label = document.createElement("strong");
     label.textContent = `Selected file ${index + 1}: `;
 
     const fileName = document.createElement("span");
     fileName.textContent = file.name;
-    fileName.className = "sms-file-name";
+    fileName.className = "WhatsApp-file-name";
     fileName.title = "Click to preview this file";
     fileName.addEventListener("click", async () => {
       try {
@@ -992,11 +992,11 @@ function renderSelectedSmsFiles() {
     leftSide.appendChild(fileName);
 
     const rightSide = document.createElement("div");
-    rightSide.className = "sms-file-pill-actions";
+    rightSide.className = "WhatsApp-file-pill-actions";
 
     const previewBtn = document.createElement("button");
     previewBtn.type = "button";
-    previewBtn.className = "sms-small-action-btn";
+    previewBtn.className = "WhatsApp-small-action-btn";
     previewBtn.textContent = "Preview";
     previewBtn.addEventListener("click", async () => {
       try {
@@ -1008,11 +1008,11 @@ function renderSelectedSmsFiles() {
 
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
-    removeBtn.className = "sms-small-remove-btn";
+    removeBtn.className = "WhatsApp-small-remove-btn";
     removeBtn.textContent = "✕";
     removeBtn.title = "Remove file";
     removeBtn.addEventListener("click", () => {
-      removeSelectedSmsFile(index);
+      removeSelectedWhatsAppFile(index);
     });
 
     rightSide.appendChild(previewBtn);
@@ -1023,17 +1023,17 @@ function renderSelectedSmsFiles() {
     listWrapper.appendChild(row);
   });
 
-  if (selectedSmsFiles.length > 1) {
+  if (selectedWhatsAppFiles.length > 1) {
     const previewAllBtn = document.createElement("button");
     previewAllBtn.type = "button";
-    previewAllBtn.className = "sms-preview-all-btn";
+    previewAllBtn.className = "WhatsApp-preview-all-btn";
     previewAllBtn.textContent = "Preview All Files";
     previewAllBtn.addEventListener("click", async () => {
       try {
         const storedFiles = await Promise.all(
-          selectedSmsFiles.map((file) => convertLiveFileToStoredPreviewFile(file))
+          selectedWhatsAppFiles.map((file) => convertLiveFileToStoredPreviewFile(file))
         );
-        openStoredFilesPreview(storedFiles, "Selected SMS Files Preview");
+        openStoredFilesPreview(storedFiles, "Selected WhatsApp Files Preview");
       } catch (error) {
         console.error("Preview all failed:", error);
       }
@@ -1045,72 +1045,72 @@ function renderSelectedSmsFiles() {
   selectedFileEl.appendChild(listWrapper);
 }
 
-function removeSelectedSmsFile(indexToRemove) {
-  const file = selectedSmsFiles[indexToRemove];
+function removeSelectedWhatsAppFile(indexToRemove) {
+  const file = selectedWhatsAppFiles[indexToRemove];
   if (!file) return;
 
   const confirmed = confirm(`Are you sure you want to remove "${file.name}"?`);
   if (!confirmed) return;
 
-  selectedSmsFiles = selectedSmsFiles.filter((_, index) => index !== indexToRemove);
+  selectedWhatsAppFiles = selectedWhatsAppFiles.filter((_, index) => index !== indexToRemove);
 
-  clearSmsError();
-  clearSmsReport();
-  renderSelectedSmsFiles();
+  clearWhatsAppError();
+  clearWhatsAppReport();
+  renderSelectedWhatsAppFiles();
 }
 
-function clearSmsError() {
-  const errorEl = document.getElementById("smsErrorLabel");
+function clearWhatsAppError() {
+  const errorEl = document.getElementById("WhatsAppErrorLabel");
   if (!errorEl) return;
 
   errorEl.innerHTML = "";
   errorEl.classList.remove("show");
 }
 
-function showSmsError(message) {
-  const errorEl = document.getElementById("smsErrorLabel");
+function showWhatsAppError(message) {
+  const errorEl = document.getElementById("WhatsAppErrorLabel");
   if (!errorEl) return;
 
   errorEl.innerHTML = message;
   errorEl.classList.add("show");
 }
 
-function clearSmsReport() {
-  const reportContainer = document.getElementById("smsReportContainer");
+function clearWhatsAppReport() {
+  const reportContainer = document.getElementById("WhatsAppReportContainer");
   if (!reportContainer) return;
 
   reportContainer.innerHTML = "";
-latestSmsRows = [];
-selectedSmsMonths = new Set();
-selectedSmsRecipientKeys = new Set();
-smsDisplayFilterMonths = new Set();
-smsDisplaySearchText = "";
+latestWhatsAppRows = [];
+selectedWhatsAppMonths = new Set();
+selectedWhatsAppRecipientKeys = new Set();
+WhatsAppDisplayFilterMonths = new Set();
+WhatsAppDisplaySearchText = "";
 
-smsDraftFilterMonths = new Set();
-smsDraftSearchText = "";
+WhatsAppDraftFilterMonths = new Set();
+WhatsAppDraftSearchText = "";
 
-smsFormDraft = {
+WhatsAppFormDraft = {
   hour: "19",
   minute: "00",
   message: "",
 };
 }
 
-async function handleProcessSmsFiles() {
-  clearSmsError();
-  clearSmsReport();
+async function handleProcessWhatsAppFiles() {
+  clearWhatsAppError();
+  clearWhatsAppReport();
 
-  if (selectedSmsFiles.length === 0) {
-    showSmsError("Please upload at least one .xlsx file first.");
+  if (selectedWhatsAppFiles.length === 0) {
+    showWhatsAppError("Please upload at least one .xlsx file first.");
     return;
   }
 
-  const invalidExtensionFiles = selectedSmsFiles.filter(
+  const invalidExtensionFiles = selectedWhatsAppFiles.filter(
     (file) => !file.name.toLowerCase().endsWith(".xlsx")
   );
 
   if (invalidExtensionFiles.length > 0) {
-    showSmsError(
+    showWhatsAppError(
       buildErrorListHtml([
         ...invalidExtensionFiles.map(
           (file) =>
@@ -1126,18 +1126,18 @@ async function handleProcessSmsFiles() {
   try {
     const fileProcessingResults = [];
 
-    for (const file of selectedSmsFiles) {
+    for (const file of selectedWhatsAppFiles) {
       const fileData = await readFileAsArrayBuffer(file);
       const workbook = XLSX.read(fileData, { type: "array" });
 
       fileProcessingResults.push({
         file,
         workbook,
-        isGeneratedMonthlyWorkbook: isGeneratedMonthlySmsWorkbook(workbook),
+        isGeneratedMonthlyWorkbook: isGeneratedMonthlyWhatsAppWorkbook(workbook),
       });
     }
 
-    const mergedRows = extractSmsRowsFromAnyWorkbooks(
+    const mergedRows = extractWhatsAppRowsFromAnyWorkbooks(
       fileProcessingResults.map((result) => ({
         fileName: result.file.name,
         workbook: result.workbook,
@@ -1146,19 +1146,19 @@ async function handleProcessSmsFiles() {
     );
 
     if (mergedRows.length === 0) {
-      showSmsError(
+      showWhatsAppError(
         "No usable people were found. The system searched the uploaded file(s), but could not find enough valid rows containing a date of birth and phone number."
       );
       return;
     }
 
-    latestSmsRows = mergedRows;
-    initializeSelectedSmsMonths(mergedRows);
-    initializeSelectedSmsRecipients(mergedRows);
-    renderSmsReport(mergedRows, selectedSmsFiles.length);
+    latestWhatsAppRows = mergedRows;
+    initializeSelectedWhatsAppMonths(mergedRows);
+    initializeSelectedWhatsAppRecipients(mergedRows);
+    renderWhatsAppReport(mergedRows, selectedWhatsAppFiles.length);
   } catch (error) {
-    console.error("Send SMS processing failed:", error);
-    showSmsError(
+    console.error("Send WhatsApp processing failed:", error);
+    showWhatsAppError(
       "Could not process the uploaded Excel file(s). Please make sure all selected files are valid .xlsx workbooks."
     );
   }
@@ -1220,7 +1220,7 @@ function validateWorkbookStructure(workbook, fileName = "Unknown file") {
   };
 }
 
-function isGeneratedMonthlySmsWorkbook(workbook) {
+function isGeneratedMonthlyWhatsAppWorkbook(workbook) {
   const originalSheetNames = Array.isArray(workbook?.SheetNames)
     ? workbook.SheetNames
     : [];
@@ -1239,12 +1239,12 @@ function isGeneratedMonthlySmsWorkbook(workbook) {
   return hasAllRequiredSheets && hasOnlyRequiredSheets;
 }
 
-function extractSmsRowsFromAnyWorkbooks(fileWorkbooks) {
+function extractWhatsAppRowsFromAnyWorkbooks(fileWorkbooks) {
   const rows = [];
 
   fileWorkbooks.forEach(({ fileName, workbook, isGeneratedMonthlyWorkbook }) => {
     if (isGeneratedMonthlyWorkbook) {
-      const generatedRows = extractSmsRowsFromMultipleWorkbooks([
+      const generatedRows = extractWhatsAppRowsFromMultipleWorkbooks([
         {
           fileName,
           workbook,
@@ -1255,7 +1255,7 @@ function extractSmsRowsFromAnyWorkbooks(fileWorkbooks) {
       return;
     }
 
-    const randomRows = extractSmsRowsFromRandomWorkbook(fileName, workbook);
+    const randomRows = extractWhatsAppRowsFromRandomWorkbook(fileName, workbook);
     rows.push(...randomRows);
   });
 
@@ -1272,7 +1272,7 @@ function extractSmsRowsFromAnyWorkbooks(fileWorkbooks) {
   return rows;
 }
 
-function extractSmsRowsFromMultipleWorkbooks(fileWorkbooks) {
+function extractWhatsAppRowsFromMultipleWorkbooks(fileWorkbooks) {
   const rows = [];
   const currentYear = new Date().getFullYear();
 
@@ -1390,7 +1390,7 @@ const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
   return rows;
 }
 
-function extractSmsRowsFromRandomWorkbook(fileName, workbook) {
+function extractWhatsAppRowsFromRandomWorkbook(fileName, workbook) {
   const rows = [];
   const currentYear = new Date().getFullYear();
 
@@ -1432,7 +1432,7 @@ function extractSmsRowsFromRandomWorkbook(fileName, workbook) {
       const originalDobLabel = formatDateDDMMYYYY(parsedDob);
       const originalDobWeekday = getWeekdayName(parsedDob);
 
-      const birthdayMonthName = SELECTABLE_SMS_MONTHS[parsedDob.getMonth()];
+      const birthdayMonthName = SELECTABLE_WhatsApp_MONTHS[parsedDob.getMonth()];
 
       const reminderDate = getReminderDateThirtyDaysBefore(
         parsedDob.getDate(),
@@ -1459,68 +1459,68 @@ function extractSmsRowsFromRandomWorkbook(fileName, workbook) {
   return rows;
 }
 
-function initializeSelectedSmsMonths(rows) {
+function initializeSelectedWhatsAppMonths(rows) {
   const counts = getSheetCounts(rows);
-  selectedSmsMonths = new Set();
+  selectedWhatsAppMonths = new Set();
 
-  SELECTABLE_SMS_MONTHS.forEach((month) => {
+  SELECTABLE_WhatsApp_MONTHS.forEach((month) => {
     if ((counts[month] || 0) > 0) {
-      selectedSmsMonths.add(month);
+      selectedWhatsAppMonths.add(month);
     }
   });
 }
 
 
-function initializeSelectedSmsRecipients(rows) {
-  selectedSmsRecipientKeys = new Set();
+function initializeSelectedWhatsAppRecipients(rows) {
+  selectedWhatsAppRecipientKeys = new Set();
 
   rows.forEach((row) => {
-    if (!selectedSmsMonths.has(row.sheetName)) return;
+    if (!selectedWhatsAppMonths.has(row.sheetName)) return;
     if (!row.phone) return;
 
-    selectedSmsRecipientKeys.add(getSmsRecipientKey(row));
+    selectedWhatsAppRecipientKeys.add(getWhatsAppRecipientKey(row));
   });
 }
 
 function addMonthPeopleToSelection(month) {
-  latestSmsRows.forEach((row) => {
+  latestWhatsAppRows.forEach((row) => {
     if (row.sheetName !== month) return;
     if (!row.phone) return;
 
-    selectedSmsRecipientKeys.add(getSmsRecipientKey(row));
+    selectedWhatsAppRecipientKeys.add(getWhatsAppRecipientKey(row));
   });
 }
 
 function removeMonthPeopleFromSelection(month) {
-  latestSmsRows.forEach((row) => {
+  latestWhatsAppRows.forEach((row) => {
     if (row.sheetName !== month) return;
 
-    selectedSmsRecipientKeys.delete(getSmsRecipientKey(row));
+    selectedWhatsAppRecipientKeys.delete(getWhatsAppRecipientKey(row));
   });
 }
 
-function getRowsInsideSelectedSmsMonths() {
-  if (selectedSmsMonths.size === 0) {
+function getRowsInsideSelectedWhatsAppMonths() {
+  if (selectedWhatsAppMonths.size === 0) {
     return [];
   }
 
-  return latestSmsRows.filter((row) => selectedSmsMonths.has(row.sheetName));
+  return latestWhatsAppRows.filter((row) => selectedWhatsAppMonths.has(row.sheetName));
 }
 
-function getSmsRecipientKey(row) {
+function getWhatsAppRecipientKey(row) {
   return `${row.sourceFileName || ""}__${row.sheetName || ""}__${
     row.rowNumber || ""
   }__${row.phone || ""}`;
 }
 
-function renderSmsReport(rows, filesCount = 1) {
-  const container = document.getElementById("smsReportContainer");
+function renderWhatsAppReport(rows, filesCount = 1) {
+  const container = document.getElementById("WhatsAppReportContainer");
   if (!container) return;
 
 const groupedCounts = getSheetCounts(rows);
-const selectedMonthRows = getRowsInsideSelectedSmsMonths();
-const visibleRows = getVisibleSmsRowsForDemo();
-const filteredRows = getFilteredSmsRows();
+const selectedMonthRows = getRowsInsideSelectedWhatsAppMonths();
+const visibleRows = getVisibleWhatsAppRowsForDemo();
+const filteredRows = getFilteredWhatsAppRows();
 const filteredRecipients = getUniqueRecipients(filteredRows);
 const notSelectedPeopleCount = Math.max(
   selectedMonthRows.length - filteredRows.length,
@@ -1529,21 +1529,21 @@ const notSelectedPeopleCount = Math.max(
 
   const countsHtml = REQUIRED_SHEETS.map((sheetName) => {
     const count = groupedCounts[sheetName] || 0;
-    const isSelectable = SELECTABLE_SMS_MONTHS.includes(sheetName);
-    const isSelected = selectedSmsMonths.has(sheetName);
+    const isSelectable = SELECTABLE_WhatsApp_MONTHS.includes(sheetName);
+    const isSelected = selectedWhatsAppMonths.has(sheetName);
 
     return `
       <button
         type="button"
-        class="sms-month-count-box ${
-          isSelectable ? "sms-month-selectable" : "sms-month-disabled"
+        class="WhatsApp-month-count-box ${
+          isSelectable ? "WhatsApp-month-selectable" : "WhatsApp-month-disabled"
         } ${isSelected ? "selected" : ""}"
-        data-sms-month="${escapeHtml(sheetName)}"
+        data-WhatsApp-month="${escapeHtml(sheetName)}"
         ${isSelectable ? "" : "disabled"}
         title="${
           isSelectable
             ? "Click to select or unselect this month"
-            : "Not Specified is informational only and cannot be selected for SMS sending"
+            : "Not Specified is informational only and cannot be selected for WhatsApp sending"
         }"
       >
         <strong>${toDisplaySheetName(sheetName)}</strong>
@@ -1561,11 +1561,11 @@ const reportCardsHtml =
     visibleRows.length > 0
       ? visibleRows
           .map((row) => {
-            const key = getSmsRecipientKey(row);
-            const isSelectedPerson = selectedSmsRecipientKeys.has(key);
+            const key = getWhatsAppRecipientKey(row);
+            const isSelectedPerson = selectedWhatsAppRecipientKeys.has(key);
 
             return `
-              <div class="sms-report-card scheduled-person-card ${
+              <div class="WhatsApp-report-card scheduled-person-card ${
                 isSelectedPerson ? "" : "scheduled-person-not-selected"
               }">
                 <div>
@@ -1595,10 +1595,10 @@ ${
 
                 <button
                   type="button"
-                  class="sms-toolbar-btn ${
-                    isSelectedPerson ? "" : "sms-toolbar-btn-secondary"
+                  class="WhatsApp-toolbar-btn ${
+                    isSelectedPerson ? "" : "WhatsApp-toolbar-btn-secondary"
                   }"
-                  data-sms-recipient-key="${escapeHtml(key)}"
+                  data-WhatsApp-recipient-key="${escapeHtml(key)}"
                 >
                   ${isSelectedPerson ? "Selected" : "Select"}
                 </button>
@@ -1607,45 +1607,45 @@ ${
           })
           .join("")
       : `
-        <div class="empty-state sms-empty-selection-state">
+        <div class="empty-state WhatsApp-empty-selection-state">
 <strong>No people match this filter.</strong>
 <p>Select months above, change the demo filter, or search by another name, phone number, or date.</p>
         </div>
       `;
 
   container.innerHTML = `
-    <div class="sms-summary-box">
-      <h2>SMS Reminder Report</h2>
+    <div class="WhatsApp-summary-box">
+      <h2>WhatsApp Reminder Report</h2>
       <p>
         The system reviewed <strong>${rows.length}</strong> people with usable names and dates of birth
         from <strong>${filesCount}</strong> ${filesCount === 1 ? "file" : "files"}.
       </p>
-<p class="sms-summary-note">
+<p class="WhatsApp-summary-note">
   The system supports generated monthly workbooks and random Excel files. If a random file is uploaded,
   the system scans the file, detects dates of birth and phone numbers, then groups people by birthday month automatically.
 </p>
     </div>
 
-    <div class="sms-month-selection-toolbar">
-      <div class="sms-month-selection-info">
+    <div class="WhatsApp-month-selection-toolbar">
+      <div class="WhatsApp-month-selection-info">
         <strong>Selected months:</strong> ${getSelectedMonthsText()}
       </div>
 
-      <div class="sms-month-selection-actions">
-        <button type="button" id="smsSelectAllMonthsBtn" class="sms-toolbar-btn">
+      <div class="WhatsApp-month-selection-actions">
+        <button type="button" id="WhatsAppSelectAllMonthsBtn" class="WhatsApp-toolbar-btn">
           Select All Months
         </button>
-        <button type="button" id="smsClearAllMonthsBtn" class="sms-toolbar-btn sms-toolbar-btn-secondary">
+        <button type="button" id="WhatsAppClearAllMonthsBtn" class="WhatsApp-toolbar-btn WhatsApp-toolbar-btn-secondary">
           Clear Selection
         </button>
       </div>
     </div>
 
-    <div class="sms-month-count-grid">
+    <div class="WhatsApp-month-count-grid">
       ${countsHtml}
     </div>
 
-    <div class="sms-filtered-summary-box">
+    <div class="WhatsApp-filtered-summary-box">
       <p>
         People inside selected month(s):
         <strong>${selectedMonthRows.length}</strong>
@@ -1659,63 +1659,63 @@ ${
         <strong>${notSelectedPeopleCount}</strong>
       </p>
       <p>
-        Unique phone numbers that will receive SMS:
+        Unique phone numbers that will receive WhatsApp:
         <strong>${filteredRecipients.length}</strong>
       </p>
     </div>
 
-<div class="sms-month-selection-toolbar sms-people-selection-toolbar">
-  <div class="sms-month-selection-info">
+<div class="WhatsApp-month-selection-toolbar WhatsApp-people-selection-toolbar">
+  <div class="WhatsApp-month-selection-info">
     <strong>People selection:</strong>
-    choose exactly who will receive the scheduled SMS inside the selected month(s).
+    choose exactly who will receive the scheduled WhatsApp inside the selected month(s).
   </div>
 
-  <div class="sms-month-selection-actions">
-    <button type="button" id="smsSelectAllPeopleBtn" class="sms-toolbar-btn">
+  <div class="WhatsApp-month-selection-actions">
+    <button type="button" id="WhatsAppSelectAllPeopleBtn" class="WhatsApp-toolbar-btn">
       Select All People
     </button>
-    <button type="button" id="smsClearAllPeopleBtn" class="sms-toolbar-btn sms-toolbar-btn-secondary">
+    <button type="button" id="WhatsAppClearAllPeopleBtn" class="WhatsApp-toolbar-btn WhatsApp-toolbar-btn-secondary">
       Clear All People
     </button>
   </div>
 </div>
 
-<div class="sms-demo-filter-box">
-  <div class="sms-demo-filter-header">
+<div class="WhatsApp-demo-filter-box">
+  <div class="WhatsApp-demo-filter-header">
     <div>
       <h3>Filter the demo list</h3>
       <p>
-        This only changes what you see below. It does not remove people from the final SMS sending list.
+        This only changes what you see below. It does not remove people from the final WhatsApp sending list.
       </p>
     </div>
 
-    <button type="button" id="smsClearDemoFiltersBtn" class="sms-toolbar-btn sms-toolbar-btn-secondary">
+    <button type="button" id="WhatsAppClearDemoFiltersBtn" class="WhatsApp-toolbar-btn WhatsApp-toolbar-btn-secondary">
       Clear Demo Filter
     </button>
   </div>
 
-  <details class="sms-filter-dropdown" id="smsFilterDropdown">
+  <details class="WhatsApp-filter-dropdown" id="WhatsAppFilterDropdown">
     <summary>
       Filter by month
       <span>
         ${
-          smsDraftFilterMonths.size === 0
+          WhatsAppDraftFilterMonths.size === 0
             ? "All selected months"
-            : [...smsDraftFilterMonths].map(toDisplaySheetName).join(", ")
+            : [...WhatsAppDraftFilterMonths].map(toDisplaySheetName).join(", ")
         }
       </span>
     </summary>
 
-    <div class="sms-filter-month-grid">
-      ${SELECTABLE_SMS_MONTHS.map((month) => {
-        const isChecked = smsDraftFilterMonths.has(month);
+    <div class="WhatsApp-filter-month-grid">
+      ${SELECTABLE_WhatsApp_MONTHS.map((month) => {
+        const isChecked = WhatsAppDraftFilterMonths.has(month);
 
         return `
-          <label class="sms-filter-month-option">
+          <label class="WhatsApp-filter-month-option">
             <input
               type="checkbox"
               value="${escapeHtml(month)}"
-              data-sms-demo-filter-month="${escapeHtml(month)}"
+              data-WhatsApp-demo-filter-month="${escapeHtml(month)}"
               ${isChecked ? "checked" : ""}
             />
             <span>${toDisplaySheetName(month)}</span>
@@ -1725,92 +1725,92 @@ ${
     </div>
   </details>
 
-  <div class="sms-demo-search-row">
-    <label class="send-sms-label" for="smsDemoSearchInput">
+  <div class="WhatsApp-demo-search-row">
+    <label class="send-WhatsApp-label" for="WhatsAppDemoSearchInput">
       Search by name, phone number, or date
     </label>
 
     <input
-      id="smsDemoSearchInput"
+      id="WhatsAppDemoSearchInput"
       type="text"
-      class="sms-demo-search-input"
+      class="WhatsApp-demo-search-input"
       placeholder="Example: Mia, 96135, 08/02/2019, February..."
-      value="${escapeHtml(smsDraftSearchText)}"
+      value="${escapeHtml(WhatsAppDraftSearchText)}"
     />
   </div>
 
-  <div class="sms-demo-filter-actions">
-    <button type="button" id="smsApplyDemoFiltersBtn" class="sms-toolbar-btn">
+  <div class="WhatsApp-demo-filter-actions">
+    <button type="button" id="WhatsAppApplyDemoFiltersBtn" class="WhatsApp-toolbar-btn">
       Apply Filter
     </button>
   </div>
 
-  <div class="sms-demo-filter-result">
+  <div class="WhatsApp-demo-filter-result">
     Showing <strong>${visibleRows.length}</strong> person/people from
     <strong>${selectedMonthRows.length}</strong> people inside selected month(s).
     Final selected recipients still remain <strong>${filteredRows.length}</strong>.
   </div>
 </div>
 
-<div class="sms-report-grid">
+<div class="WhatsApp-report-grid">
   ${reportCardsHtml}
 </div>
 
-    <div class="sms-form-box">
-      <label class="send-sms-label" for="smsHourInput">
+    <div class="WhatsApp-form-box">
+      <label class="send-WhatsApp-label" for="WhatsAppHourInput">
         At what time do you wanna send this message?
       </label>
 
-      <div class="sms-time-grid">
+      <div class="WhatsApp-time-grid">
         <div>
-          <label class="send-sms-small-label" for="smsHourInput">Hour</label>
+          <label class="send-WhatsApp-small-label" for="WhatsAppHourInput">Hour</label>
           <input
-            id="smsHourInput"
+            id="WhatsAppHourInput"
             type="number"
             min="0"
             max="23"
             placeholder="e.g. 9"
-            value="${escapeHtml(smsFormDraft.hour)}"
+            value="${escapeHtml(WhatsAppFormDraft.hour)}"
           />
         </div>
 
         <div>
-          <label class="send-sms-small-label" for="smsMinuteInput">Minute</label>
+          <label class="send-WhatsApp-small-label" for="WhatsAppMinuteInput">Minute</label>
           <input
-            id="smsMinuteInput"
+            id="WhatsAppMinuteInput"
             type="number"
             min="0"
             max="59"
             placeholder="e.g. 30"
-            value="${escapeHtml(smsFormDraft.minute)}"
+            value="${escapeHtml(WhatsAppFormDraft.minute)}"
           />
         </div>
       </div>
 
-      <label class="send-sms-label" for="smsTextArea">
+      <label class="send-WhatsApp-label" for="WhatsAppTextArea">
         The text going to be sent is:
       </label>
 
       <textarea
-        id="smsTextArea"
-        class="sms-textarea"
+        id="WhatsAppTextArea"
+        class="WhatsApp-textarea"
         placeholder="Leave empty for now..."
-      >${escapeHtml(smsFormDraft.message)}</textarea>
+      >${escapeHtml(WhatsAppFormDraft.message)}</textarea>
 
       <button
-        id="finalSendSmsBtn"
+        id="finalSendWhatsAppBtn"
         type="button"
-        class="disabled-send-sms-btn"
-        title="Click to save this SMS action into history."
+        class="disabled-send-WhatsApp-btn"
+        title="Click to save this WhatsApp action into history."
       >
-        Send SMS for Selected People
+        Send WhatsApp for Selected People
       </button>
 
-      <div id="smsSendErrorLabel" class="sms-error-label sms-send-error-label"></div>
+      <div id="WhatsAppSendErrorLabel" class="WhatsApp-error-label WhatsApp-send-error-label"></div>
     </div>
 
-    <p class="sms-disabled-note">
-      SMS sending is disabled for now. Later, when enabled, it should ask:
+    <p class="WhatsApp-disabled-note">
+      WhatsApp sending is disabled for now. Later, when enabled, it should ask:
       “Are you sure?”
     </p>
   `;
@@ -1824,15 +1824,15 @@ attachTimeValidationEvents();
   attachFormDraftEvents();
   validateSendTimeInputs();
 
-  const sendButton = document.getElementById("finalSendSmsBtn");
+  const sendButton = document.getElementById("finalSendWhatsAppBtn");
   if (sendButton) {
     sendButton.addEventListener("click", () => {
       const isValidTime = validateSendTimeInputs();
       if (!isValidTime) return;
 
-      const selectedRows = getFilteredSmsRows();
+      const selectedRows = getFilteredWhatsAppRows();
       if (selectedRows.length === 0) {
-        showSendSmsInlineError(
+        showSendWhatsAppInlineError(
           "Please select at least one person inside the selected month(s) before sending."
         );
         return;
@@ -1840,37 +1840,37 @@ attachTimeValidationEvents();
 
       const detailedRecipients = getDetailedRecipients(selectedRows);
       if (detailedRecipients.length === 0) {
-        showSendSmsInlineError(
+        showSendWhatsAppInlineError(
           "No valid phone numbers were found inside the selected people."
         );
         return;
       }
 
-      clearSendSmsInlineError();
+      clearSendWhatsAppInlineError();
 
       const confirmed = confirm(
-        `Are you sure you want to schedule SMS messages for ${selectedRows.length} selected person/people across ${selectedSmsMonths.size} month(s)?`
+        `Are you sure you want to schedule WhatsApp messages for ${selectedRows.length} selected person/people across ${selectedWhatsAppMonths.size} month(s)?`
       );
       if (!confirmed) return;
 
-      const smsTextArea = document.getElementById("smsTextArea");
-      const messageText = smsTextArea ? smsTextArea.value.trim() : "";
+      const WhatsAppTextArea = document.getElementById("WhatsAppTextArea");
+      const messageText = WhatsAppTextArea ? WhatsAppTextArea.value.trim() : "";
 
-      const hourInput = document.getElementById("smsHourInput");
-      const minuteInput = document.getElementById("smsMinuteInput");
+      const hourInput = document.getElementById("WhatsAppHourInput");
+      const minuteInput = document.getElementById("WhatsAppMinuteInput");
 
       const hour = hourInput ? hourInput.value.trim().padStart(2, "0") : "19";
       const minute = minuteInput ? minuteInput.value.trim().padStart(2, "0") : "00";
 
       const fromNumber = "+96170000000"; // replace later with your real connected number
 
-      saveSendSmsHistory({
+      saveSendWhatsAppHistory({
         mode: "scheduled",
         fileName:
-          selectedSmsFiles.length === 1
-            ? selectedSmsFiles[0].name
-            : `${selectedSmsFiles.length} files merged`,
-        selectedMonths: [...selectedSmsMonths].map(toDisplaySheetName),
+          selectedWhatsAppFiles.length === 1
+            ? selectedWhatsAppFiles[0].name
+            : `${selectedWhatsAppFiles.length} files merged`,
+        selectedMonths: [...selectedWhatsAppMonths].map(toDisplaySheetName),
         fromNumber,
         recipients: detailedRecipients,
         messageText,
@@ -1878,188 +1878,188 @@ attachTimeValidationEvents();
         sendTimeLabel: `${hour}:${minute}`,
       });
 
-      alert("Scheduled SMS action was saved in history successfully.");
+      alert("Scheduled WhatsApp action was saved in history successfully.");
     });
   }
 }
 
 function attachMonthSelectionEvents() {
-  document.querySelectorAll("[data-sms-month]").forEach((button) => {
+  document.querySelectorAll("[data-WhatsApp-month]").forEach((button) => {
     button.addEventListener("click", () => {
-      const month = normalizeSheetName(button.dataset.smsMonth || "");
-      if (!month || !SELECTABLE_SMS_MONTHS.includes(month)) return;
+      const month = normalizeSheetName(button.dataset.WhatsAppMonth || "");
+      if (!month || !SELECTABLE_WhatsApp_MONTHS.includes(month)) return;
 
-      collectSmsFormDraft();
+      collectWhatsAppFormDraft();
 
-      if (selectedSmsMonths.has(month)) {
-        selectedSmsMonths.delete(month);
+      if (selectedWhatsAppMonths.has(month)) {
+        selectedWhatsAppMonths.delete(month);
         removeMonthPeopleFromSelection(month);
       } else {
-        selectedSmsMonths.add(month);
+        selectedWhatsAppMonths.add(month);
         addMonthPeopleToSelection(month);
       }
 
-      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+      renderWhatsAppReport(latestWhatsAppRows, selectedWhatsAppFiles.length);
     });
   });
 }
 
 function attachToolbarEvents() {
-  const selectAllBtn = document.getElementById("smsSelectAllMonthsBtn");
-  const clearAllBtn = document.getElementById("smsClearAllMonthsBtn");
+  const selectAllBtn = document.getElementById("WhatsAppSelectAllMonthsBtn");
+  const clearAllBtn = document.getElementById("WhatsAppClearAllMonthsBtn");
 
   if (selectAllBtn) {
     selectAllBtn.addEventListener("click", () => {
-      collectSmsFormDraft();
+      collectWhatsAppFormDraft();
 
-      const counts = getSheetCounts(latestSmsRows);
-      selectedSmsMonths = new Set();
+      const counts = getSheetCounts(latestWhatsAppRows);
+      selectedWhatsAppMonths = new Set();
 
-      SELECTABLE_SMS_MONTHS.forEach((month) => {
+      SELECTABLE_WhatsApp_MONTHS.forEach((month) => {
         if ((counts[month] || 0) > 0) {
-          selectedSmsMonths.add(month);
+          selectedWhatsAppMonths.add(month);
         }
       });
 
-      initializeSelectedSmsRecipients(latestSmsRows);
-      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+      initializeSelectedWhatsAppRecipients(latestWhatsAppRows);
+      renderWhatsAppReport(latestWhatsAppRows, selectedWhatsAppFiles.length);
     });
   }
 
   if (clearAllBtn) {
     clearAllBtn.addEventListener("click", () => {
-      collectSmsFormDraft();
-      selectedSmsMonths = new Set();
-      selectedSmsRecipientKeys = new Set();
-      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+      collectWhatsAppFormDraft();
+      selectedWhatsAppMonths = new Set();
+      selectedWhatsAppRecipientKeys = new Set();
+      renderWhatsAppReport(latestWhatsAppRows, selectedWhatsAppFiles.length);
     });
   }
 }
 
 function attachPeopleToolbarEvents() {
-  const selectAllPeopleBtn = document.getElementById("smsSelectAllPeopleBtn");
-  const clearAllPeopleBtn = document.getElementById("smsClearAllPeopleBtn");
+  const selectAllPeopleBtn = document.getElementById("WhatsAppSelectAllPeopleBtn");
+  const clearAllPeopleBtn = document.getElementById("WhatsAppClearAllPeopleBtn");
 
   if (selectAllPeopleBtn) {
     selectAllPeopleBtn.addEventListener("click", () => {
-      collectSmsFormDraft();
+      collectWhatsAppFormDraft();
 
-      getRowsInsideSelectedSmsMonths().forEach((row) => {
+      getRowsInsideSelectedWhatsAppMonths().forEach((row) => {
         if (!row.phone) return;
-        selectedSmsRecipientKeys.add(getSmsRecipientKey(row));
+        selectedWhatsAppRecipientKeys.add(getWhatsAppRecipientKey(row));
       });
 
-      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+      renderWhatsAppReport(latestWhatsAppRows, selectedWhatsAppFiles.length);
     });
   }
 
   if (clearAllPeopleBtn) {
     clearAllPeopleBtn.addEventListener("click", () => {
-      collectSmsFormDraft();
+      collectWhatsAppFormDraft();
 
-      getRowsInsideSelectedSmsMonths().forEach((row) => {
-        selectedSmsRecipientKeys.delete(getSmsRecipientKey(row));
+      getRowsInsideSelectedWhatsAppMonths().forEach((row) => {
+        selectedWhatsAppRecipientKeys.delete(getWhatsAppRecipientKey(row));
       });
 
-      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+      renderWhatsAppReport(latestWhatsAppRows, selectedWhatsAppFiles.length);
     });
   }
 }
 
 function attachRecipientSelectionEvents() {
-  document.querySelectorAll("[data-sms-recipient-key]").forEach((button) => {
+  document.querySelectorAll("[data-WhatsApp-recipient-key]").forEach((button) => {
     button.addEventListener("click", () => {
-      collectSmsFormDraft();
+      collectWhatsAppFormDraft();
 
-      const key = button.dataset.smsRecipientKey || "";
+      const key = button.dataset.WhatsAppRecipientKey || "";
       if (!key) return;
 
-      if (selectedSmsRecipientKeys.has(key)) {
-        selectedSmsRecipientKeys.delete(key);
+      if (selectedWhatsAppRecipientKeys.has(key)) {
+        selectedWhatsAppRecipientKeys.delete(key);
       } else {
-        selectedSmsRecipientKeys.add(key);
+        selectedWhatsAppRecipientKeys.add(key);
       }
 
-      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+      renderWhatsAppReport(latestWhatsAppRows, selectedWhatsAppFiles.length);
     });
   });
 }
 
 function attachDemoFilterEvents() {
-  document.querySelectorAll("[data-sms-demo-filter-month]").forEach((checkbox) => {
+  document.querySelectorAll("[data-WhatsApp-demo-filter-month]").forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
-      collectSmsFormDraft();
+      collectWhatsAppFormDraft();
 
-      const month = normalizeSheetName(checkbox.dataset.smsDemoFilterMonth || "");
-      if (!month || !SELECTABLE_SMS_MONTHS.includes(month)) return;
+      const month = normalizeSheetName(checkbox.dataset.WhatsAppDemoFilterMonth || "");
+      if (!month || !SELECTABLE_WhatsApp_MONTHS.includes(month)) return;
 
       if (checkbox.checked) {
-        smsDraftFilterMonths.add(month);
+        WhatsAppDraftFilterMonths.add(month);
       } else {
-        smsDraftFilterMonths.delete(month);
+        WhatsAppDraftFilterMonths.delete(month);
       }
 
       updateFilterDropdownLabel();
     });
   });
 
-  const searchInput = document.getElementById("smsDemoSearchInput");
+  const searchInput = document.getElementById("WhatsAppDemoSearchInput");
   if (searchInput) {
     searchInput.addEventListener("input", () => {
-      collectSmsFormDraft();
-      smsDraftSearchText = searchInput.value || "";
+      collectWhatsAppFormDraft();
+      WhatsAppDraftSearchText = searchInput.value || "";
     });
   }
 
-  const applyFiltersBtn = document.getElementById("smsApplyDemoFiltersBtn");
+  const applyFiltersBtn = document.getElementById("WhatsAppApplyDemoFiltersBtn");
   if (applyFiltersBtn) {
     applyFiltersBtn.addEventListener("click", () => {
-      collectSmsFormDraft();
+      collectWhatsAppFormDraft();
 
-      smsDisplayFilterMonths = new Set(smsDraftFilterMonths);
-      smsDisplaySearchText = smsDraftSearchText;
+      WhatsAppDisplayFilterMonths = new Set(WhatsAppDraftFilterMonths);
+      WhatsAppDisplaySearchText = WhatsAppDraftSearchText;
 
-      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+      renderWhatsAppReport(latestWhatsAppRows, selectedWhatsAppFiles.length);
     });
   }
 
-  const clearFiltersBtn = document.getElementById("smsClearDemoFiltersBtn");
+  const clearFiltersBtn = document.getElementById("WhatsAppClearDemoFiltersBtn");
   if (clearFiltersBtn) {
     clearFiltersBtn.addEventListener("click", () => {
-      collectSmsFormDraft();
+      collectWhatsAppFormDraft();
 
-      smsDisplayFilterMonths = new Set();
-      smsDisplaySearchText = "";
+      WhatsAppDisplayFilterMonths = new Set();
+      WhatsAppDisplaySearchText = "";
 
-      smsDraftFilterMonths = new Set();
-      smsDraftSearchText = "";
+      WhatsAppDraftFilterMonths = new Set();
+      WhatsAppDraftSearchText = "";
 
-      renderSmsReport(latestSmsRows, selectedSmsFiles.length);
+      renderWhatsAppReport(latestWhatsAppRows, selectedWhatsAppFiles.length);
     });
   }
 }
 
 function updateFilterDropdownLabel() {
-  const dropdown = document.getElementById("smsFilterDropdown");
+  const dropdown = document.getElementById("WhatsAppFilterDropdown");
   if (!dropdown) return;
 
   const summaryLabel = dropdown.querySelector("summary span");
   if (!summaryLabel) return;
 
   summaryLabel.textContent =
-    smsDraftFilterMonths.size === 0
+    WhatsAppDraftFilterMonths.size === 0
       ? "All selected months"
-      : [...smsDraftFilterMonths].map(toDisplaySheetName).join(", ");
+      : [...WhatsAppDraftFilterMonths].map(toDisplaySheetName).join(", ");
 }
 
-function getVisibleSmsRowsForDemo() {
-  let rows = getRowsInsideSelectedSmsMonths();
+function getVisibleWhatsAppRowsForDemo() {
+  let rows = getRowsInsideSelectedWhatsAppMonths();
 
-  if (smsDisplayFilterMonths.size > 0) {
-    rows = rows.filter((row) => smsDisplayFilterMonths.has(row.sheetName));
+  if (WhatsAppDisplayFilterMonths.size > 0) {
+    rows = rows.filter((row) => WhatsAppDisplayFilterMonths.has(row.sheetName));
   }
 
-  const search = normalizeValue(smsDisplaySearchText).toLowerCase();
+  const search = normalizeValue(WhatsAppDisplaySearchText).toLowerCase();
 
   if (search) {
     rows = rows.filter((row) => {
@@ -2085,8 +2085,8 @@ function getVisibleSmsRowsForDemo() {
 }
 
 function attachTimeValidationEvents() {
-  const hourInput = document.getElementById("smsHourInput");
-  const minuteInput = document.getElementById("smsMinuteInput");
+  const hourInput = document.getElementById("WhatsAppHourInput");
+  const minuteInput = document.getElementById("WhatsAppMinuteInput");
 
   if (hourInput) {
     hourInput.addEventListener("input", validateSendTimeInputs);
@@ -2100,41 +2100,41 @@ function attachTimeValidationEvents() {
 }
 
 function attachFormDraftEvents() {
-  const hourInput = document.getElementById("smsHourInput");
-  const minuteInput = document.getElementById("smsMinuteInput");
-  const smsTextArea = document.getElementById("smsTextArea");
+  const hourInput = document.getElementById("WhatsAppHourInput");
+  const minuteInput = document.getElementById("WhatsAppMinuteInput");
+  const WhatsAppTextArea = document.getElementById("WhatsAppTextArea");
 
   if (hourInput) {
-    hourInput.addEventListener("input", collectSmsFormDraft);
+    hourInput.addEventListener("input", collectWhatsAppFormDraft);
   }
 
   if (minuteInput) {
-    minuteInput.addEventListener("input", collectSmsFormDraft);
+    minuteInput.addEventListener("input", collectWhatsAppFormDraft);
   }
 
-  if (smsTextArea) {
-    smsTextArea.addEventListener("input", collectSmsFormDraft);
+  if (WhatsAppTextArea) {
+    WhatsAppTextArea.addEventListener("input", collectWhatsAppFormDraft);
   }
 }
 
-function collectSmsFormDraft() {
-  const hourInput = document.getElementById("smsHourInput");
-  const minuteInput = document.getElementById("smsMinuteInput");
-  const smsTextArea = document.getElementById("smsTextArea");
+function collectWhatsAppFormDraft() {
+  const hourInput = document.getElementById("WhatsAppHourInput");
+  const minuteInput = document.getElementById("WhatsAppMinuteInput");
+  const WhatsAppTextArea = document.getElementById("WhatsAppTextArea");
 
-  smsFormDraft = {
-    hour: hourInput ? hourInput.value : smsFormDraft.hour,
-    minute: minuteInput ? minuteInput.value : smsFormDraft.minute,
-    message: smsTextArea ? smsTextArea.value : smsFormDraft.message,
+  WhatsAppFormDraft = {
+    hour: hourInput ? hourInput.value : WhatsAppFormDraft.hour,
+    minute: minuteInput ? minuteInput.value : WhatsAppFormDraft.minute,
+    message: WhatsAppTextArea ? WhatsAppTextArea.value : WhatsAppFormDraft.message,
   };
 }
 
 function validateSendTimeInputs() {
-  collectSmsFormDraft();
+  collectWhatsAppFormDraft();
 
-  const hourInput = document.getElementById("smsHourInput");
-  const minuteInput = document.getElementById("smsMinuteInput");
-  const sendErrorLabel = document.getElementById("smsSendErrorLabel");
+  const hourInput = document.getElementById("WhatsAppHourInput");
+  const minuteInput = document.getElementById("WhatsAppMinuteInput");
+  const sendErrorLabel = document.getElementById("WhatsAppSendErrorLabel");
 
   if (!hourInput || !minuteInput || !sendErrorLabel) {
     return false;
@@ -2168,7 +2168,7 @@ function validateSendTimeInputs() {
   }
 
   if (errors.length > 0) {
-    sendErrorLabel.textContent = `Send SMS is blocked: ${errors.join(" ")}`;
+    sendErrorLabel.textContent = `Send WhatsApp is blocked: ${errors.join(" ")}`;
     sendErrorLabel.classList.add("show");
     return false;
   }
@@ -2178,32 +2178,32 @@ function validateSendTimeInputs() {
   return true;
 }
 
-function showSendSmsInlineError(message) {
-  const sendErrorLabel = document.getElementById("smsSendErrorLabel");
+function showSendWhatsAppInlineError(message) {
+  const sendErrorLabel = document.getElementById("WhatsAppSendErrorLabel");
   if (!sendErrorLabel) return;
 
   sendErrorLabel.textContent = message;
   sendErrorLabel.classList.add("show");
 }
 
-function clearSendSmsInlineError() {
-  const sendErrorLabel = document.getElementById("smsSendErrorLabel");
+function clearSendWhatsAppInlineError() {
+  const sendErrorLabel = document.getElementById("WhatsAppSendErrorLabel");
   if (!sendErrorLabel) return;
 
   sendErrorLabel.textContent = "";
   sendErrorLabel.classList.remove("show");
 }
 
-function getFilteredSmsRows() {
-  if (selectedSmsMonths.size === 0) {
+function getFilteredWhatsAppRows() {
+  if (selectedWhatsAppMonths.size === 0) {
     return [];
   }
 
-  return latestSmsRows.filter((row) => {
-    if (!selectedSmsMonths.has(row.sheetName)) return false;
+  return latestWhatsAppRows.filter((row) => {
+    if (!selectedWhatsAppMonths.has(row.sheetName)) return false;
     if (!row.phone) return false;
 
-    return selectedSmsRecipientKeys.has(getSmsRecipientKey(row));
+    return selectedWhatsAppRecipientKeys.has(getWhatsAppRecipientKey(row));
   });
 }
 
@@ -2225,11 +2225,11 @@ function getUniqueRecipients(rows) {
 }
 
 function getSelectedMonthsText() {
-  if (selectedSmsMonths.size === 0) {
+  if (selectedWhatsAppMonths.size === 0) {
     return "None";
   }
 
-  return [...selectedSmsMonths].map(toDisplaySheetName).join(", ");
+  return [...selectedWhatsAppMonths].map(toDisplaySheetName).join(", ");
 }
 
 function isWholeNumber(value) {
@@ -2279,7 +2279,7 @@ const rows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
 function buildErrorListHtml(messages) {
   return `
     <strong>Some uploaded files cannot be processed:</strong>
-    <ul class="sms-error-list">
+    <ul class="WhatsApp-error-list">
       ${messages.map((message) => `<li>${message}</li>`).join("")}
     </ul>
   `;

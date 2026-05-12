@@ -1,5 +1,6 @@
 import { generateId } from "./utils.js";
 
+
 const HISTORY_STORAGE_KEY = "boomclub_history";
 const EDIT_DRAFT_KEY = "boomclub_edit_draft";
 
@@ -139,4 +140,40 @@ export function saveSendSmsHistory({
 
 export function getSendSmsHistory() {
   return getHistory().filter((item) => item.type === "sendSms");
+}
+
+export function saveSendWhatsAppHistory({
+  mode = "scheduled",
+  fileName = "",
+  selectedMonths = [],
+  fromNumber,
+  recipients = [],
+  messageText = "",
+  sendDateLabel = "",
+  sendTimeLabel = "",
+}) {
+  const history = getHistory();
+
+  const historyItem = {
+    id: generateId(),
+    type: "sendWhatsApp",
+    mode,
+    fileName,
+    selectedMonths,
+    fromNumber,
+    recipients,
+    messageText,
+    sendDateLabel,
+    sendTimeLabel,
+    createdAt: new Date().toISOString(),
+  };
+
+  history.unshift(historyItem);
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+}
+
+export function getSendWhatsAppHistory() {
+  return getHistory().filter(
+    (item) => item.type === "sendWhatsApp" || item.type === "sendSms"
+  );
 }
