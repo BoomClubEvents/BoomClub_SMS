@@ -1,0 +1,123 @@
+<section class="page-section">
+  <div class="container">
+    <div id="adminAccountMainView">
+      <div class="page-header">
+        <div>
+          <h1>Admin Account</h1>
+          <p>Manage the temporary website password for this local system.</p>
+        </div>
+      </div>
+
+      <div class="admin-account-section">
+        <div class="admin-account-header">
+          <div>
+            <span class="admin-account-kicker">Admin Account</span>
+            <h2>Website Password</h2>
+            <p>
+              Update the temporary admin password used for this local system.
+            </p>
+          </div>
+        </div>
+
+        <form id="adminPasswordForm" class="admin-password-form">
+          <div class="admin-password-grid">
+            <div class="admin-password-field">
+              <label for="adminCurrentPassword">Enter current password</label>
+
+              <div class="admin-password-input-wrap">
+                <input
+                  id="adminCurrentPassword"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="Enter current password"
+                />
+
+                <span
+                  class="admin-password-eye"
+                  data-toggle-password="adminCurrentPassword"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Show password"
+                >
+                  👁
+                </span>
+              </div>
+            </div>
+
+            <div class="admin-password-field">
+              <label for="adminNewPassword">New password</label>
+
+              <div class="admin-password-input-wrap">
+                <input
+                  id="adminNewPassword"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="Enter new password"
+                />
+
+                <span
+                  class="admin-password-eye"
+                  data-toggle-password="adminNewPassword"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Show password"
+                >
+                  👁
+                </span>
+              </div>
+            </div>
+
+            <div class="admin-password-field">
+              <label for="adminConfirmPassword">Confirm new password</label>
+
+              <div class="admin-password-input-wrap">
+                <input
+                  id="adminConfirmPassword"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="Confirm new password"
+                />
+
+                <span
+                  class="admin-password-eye"
+                  data-toggle-password="adminConfirmPassword"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Show password"
+                >
+                  👁
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div id="adminPasswordMessage" class="admin-password-message"></div>
+
+          <div class="admin-password-actions">
+            <button id="updateAdminPasswordBtn" type="submit">
+              Update Password
+            </button>
+
+            <span id="forgotAdminPasswordBtn" class="forgot-password-link" role="button" tabindex="0">
+              Forgot password?
+            </span>
+          </div>
+
+          <p class="admin-password-note">
+            Temporary rule: the default current password is exactly
+            <strong>admin</strong>. It is case-sensitive and space-sensitive.
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <div id="forgotPasswordComingSoonView" class="admin-coming-soon-view hidden">
+      <h1>Coming soon for now</h1>
+      <p>Password recovery will be added later when real authentication is implemented.</p>
+
+      <button id="backToAdminAccountBtn" type="button">
+        Back to Admin Account
+      </button>
+    </div>
+  </div>
+</section>

@@ -184,3 +184,13 @@ export function getSendWhatsAppHistory() {
     (item) => item.type === "sendWhatsApp" || item.type === "sendSms"
   );
 }
+
+const ADMIN_PASSWORD_STORAGE_KEY = "boomclub_admin_password";
+
+export function getAdminPassword() {
+  return localStorage.getItem(ADMIN_PASSWORD_STORAGE_KEY) ?? "admin";
+}
+
+export function saveAdminPassword(newPassword) {
+  localStorage.setItem(ADMIN_PASSWORD_STORAGE_KEY, String(newPassword));
+}

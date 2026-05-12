@@ -1,6 +1,10 @@
 import { getLatestHistoryItem, getMonthHistory } from "../storage.js";
 
 export function initDashboardPage() {
+  renderDashboardStats();
+}
+
+function renderDashboardStats() {
   const historyCountEl = document.getElementById("dashboardHistoryCount");
   const lastFileEl = document.getElementById("dashboardLastFile");
 

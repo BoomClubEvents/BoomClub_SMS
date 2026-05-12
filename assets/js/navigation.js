@@ -3,6 +3,7 @@ import { initFilterByMonthPage } from "./pages/filterByMonth.js";
 import { initFilterByDatePage } from "./pages/filterByDate.js";
 import { initHistoryPage } from "./pages/history.js";
 import { initSendWhatsAppPage } from "./pages/sendSms.js";
+import { initAdminAccountPage } from "./pages/adminAccount.js";
 
 const pageContent = () => document.getElementById("pageContent");
 const sidebar = () => document.getElementById("sidebar");
@@ -29,6 +30,10 @@ const pageConfig = {
   "send-sms": {
     htmlPath: "./pages/send-sms.html",
     init: initSendWhatsAppPage,
+  },
+  "admin-account": {
+    htmlPath: "./pages/admin-account.html",
+    init: initAdminAccountPage,
   },
 };
 
