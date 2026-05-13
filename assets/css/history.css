@@ -346,3 +346,35 @@
   margin-top: 3px;
   line-height: 1.45;
 }
+
+
+/* =========================
+   SCHEDULE STATUS / CANCEL
+========================= */
+
+.history-status-active {
+  color: #146c2e;
+  font-weight: 800;
+}
+
+.history-status-cancelled {
+  color: #a61b1b;
+  font-weight: 800;
+}
+
+.history-cancel-schedule-btn {
+  background: #fff1f1;
+  color: #a61b1b;
+  border: 1px solid #ffb3b3;
+}
+
+.history-cancel-schedule-btn:hover {
+  background: #ffd6d6;
+  transform: translateY(-1px);
+}
+
+.history-cancel-schedule-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+} 

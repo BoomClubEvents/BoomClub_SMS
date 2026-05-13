@@ -1,6 +1,8 @@
 import { openFilePreview, openStoredFilesPreview } from "../previewModal.js";
 import {
   saveSendWhatsAppHistory,
+  updateSendWhatsAppHistoryItem,
+  getSendWhatsAppHistory,
   getEditDraft,
   clearEditDraft,
 } from "../storage.js";
@@ -56,6 +58,15 @@ let sendNowMessageDraft = "";
 let sendNowSearchDraft = "";
 let sendNowAppliedSearch = "";
 
+const SCHEDULE_CAMPAIGN_BOOMCLUB = "boomclubBirthday";
+const SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY = "clientBirthday";
+
+let selectedScheduledCampaignType = SCHEDULE_CAMPAIGN_BOOMCLUB;
+let scheduledDuplicateWarnings = [];
+
+let editingSendWhatsAppHistoryId = "";
+let isEditingSendWhatsAppHistory = false;
+let editingSendWhatsAppMode = "";
 
 
 export function initSendWhatsAppPage() {
@@ -69,8 +80,16 @@ export function initSendWhatsAppPage() {
   const schedulePanel = document.getElementById("WhatsAppSchedulePanel");
   const sendNowPanel = document.getElementById("WhatsAppSendNowPanel");
 
+  const scheduleChoicePanel = document.getElementById("WhatsAppScheduleChoicePanel");
+
   const scheduleModeBtn = document.getElementById("WhatsAppScheduleModeBtn");
   const sendNowModeBtn = document.getElementById("WhatsAppSendNowModeBtn");
+
+  const boomClubBirthdayBtn = document.getElementById("WhatsAppBoomClubBirthdayBtn");
+  const clientBirthdayBtn = document.getElementById("WhatsAppClientBirthdayBtn");
+  const backToWhatsAppModesFromScheduleChoiceBtn = document.getElementById(
+    "backToWhatsAppModesFromScheduleChoiceBtn"
+  );
 
   const backToWhatsAppModesBtn = document.getElementById("backToWhatsAppModesBtn");
   const backToWhatsAppModesFromNowBtn = document.getElementById("backToWhatsAppModesFromNowBtn");
@@ -91,11 +110,34 @@ if (processSendNowBtn) {
   processSendNowBtn.addEventListener("click", handleProcessSendNowFiles);
 }
 
-  if (scheduleModeBtn) {
-    scheduleModeBtn.addEventListener("click", () => {
-      showWhatsAppMode("schedule");
-    });
-  }
+if (scheduleModeBtn) {
+  scheduleModeBtn.addEventListener("click", () => {
+    showWhatsAppMode("scheduleChoice");
+  });
+}
+if (boomClubBirthdayBtn) {
+  boomClubBirthdayBtn.addEventListener("click", () => {
+    selectedScheduledCampaignType = SCHEDULE_CAMPAIGN_BOOMCLUB;
+    resetScheduledFlowForCampaign();
+    showWhatsAppMode("schedule");
+    updateScheduledCampaignHeader();
+  });
+}
+
+if (clientBirthdayBtn) {
+  clientBirthdayBtn.addEventListener("click", () => {
+    selectedScheduledCampaignType = SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY;
+    resetScheduledFlowForCampaign();
+    showWhatsAppMode("schedule");
+    updateScheduledCampaignHeader();
+  });
+}
+
+if (backToWhatsAppModesFromScheduleChoiceBtn) {
+  backToWhatsAppModesFromScheduleChoiceBtn.addEventListener("click", () => {
+    showWhatsAppMode("chooser");
+  });
+}
 
 if (sendNowModeBtn) {
   sendNowModeBtn.addEventListener("click", () => {
@@ -106,11 +148,11 @@ if (sendNowModeBtn) {
   });
 }
 
-  if (backToWhatsAppModesBtn) {
-    backToWhatsAppModesBtn.addEventListener("click", () => {
-      showWhatsAppMode("chooser");
-    });
-  }
+if (backToWhatsAppModesBtn) {
+  backToWhatsAppModesBtn.addEventListener("click", () => {
+    showWhatsAppMode("scheduleChoice");
+  });
+}
 
   if (backToWhatsAppModesFromNowBtn) {
     backToWhatsAppModesFromNowBtn.addEventListener("click", () => {
@@ -122,6 +164,12 @@ if (sendNowModeBtn) {
     if (modeChooser) modeChooser.classList.add("hidden");
     if (schedulePanel) schedulePanel.classList.add("hidden");
     if (sendNowPanel) sendNowPanel.classList.add("hidden");
+    if (scheduleChoicePanel) scheduleChoicePanel.classList.add("hidden");
+
+    if (mode === "scheduleChoice" && scheduleChoicePanel) {
+      scheduleChoicePanel.classList.remove("hidden");
+      return;
+    }
 
     if (mode === "schedule" && schedulePanel) {
       schedulePanel.classList.remove("hidden");
@@ -151,6 +199,36 @@ if (!didRestoreDraft) {
   clearSendNowError();
   clearSendNowReport();
 }
+
+
+attachSaveWhatsAppChangesEvent();
+updateWhatsAppEditBarVisibility();
+}
+
+function resetScheduledFlowForCampaign() {
+  selectedWhatsAppFiles = [];
+  latestWhatsAppRows = [];
+  selectedWhatsAppMonths = new Set();
+  selectedWhatsAppRecipientKeys = new Set();
+
+  WhatsAppDisplayFilterMonths = new Set();
+  WhatsAppDisplaySearchText = "";
+  WhatsAppDraftFilterMonths = new Set();
+  WhatsAppDraftSearchText = "";
+
+  scheduledDuplicateWarnings = [];
+
+  WhatsAppFormDraft = {
+    hour: "19",
+    minute: "00",
+    message: "",
+  };
+
+  restoredScheduledFileName = "";
+
+  renderSelectedWhatsAppFiles();
+  clearWhatsAppError();
+  clearWhatsAppReport();
 }
 
 function restoreSendWhatsAppEditDraft(showWhatsAppMode) {
@@ -161,6 +239,13 @@ function restoreSendWhatsAppEditDraft(showWhatsAppMode) {
   }
 
   const payload = draft.editPayload || {};
+
+  editingSendWhatsAppHistoryId = draft.id || "";
+isEditingSendWhatsAppHistory = Boolean(editingSendWhatsAppHistoryId);
+editingSendWhatsAppMode = payload.mode || draft.mode || "";
+
+  selectedScheduledCampaignType =
+    payload.campaignType || SCHEDULE_CAMPAIGN_BOOMCLUB;
 
   if (payload.mode === "sendNow") {
     selectedSendNowFiles = [];
@@ -213,9 +298,10 @@ function restoreSendWhatsAppEditDraft(showWhatsAppMode) {
     excludedSendNowRecipientKeys = new Set();
     sendNowMessageDraft = "";
 
-    showWhatsAppMode("schedule");
-    renderSelectedWhatsAppFiles();
-    clearWhatsAppError();
+showWhatsAppMode("schedule");
+updateScheduledCampaignHeader();
+renderSelectedWhatsAppFiles();
+clearWhatsAppError();
 
     if (latestWhatsAppRows.length > 0) {
       renderWhatsAppReport(latestWhatsAppRows, getRestoredFilesCount(restoredScheduledFileName));
@@ -796,7 +882,6 @@ function renderSendNowReport() {
 <button
   id="finalSendNowWhatsAppBtn"
   type="button"
-  class="disabled-send-WhatsApp-btn"
   disabled
   title="Write a message first before sending."
 >
@@ -934,13 +1019,37 @@ function updateSendNowButtonState() {
   }
 }
 
+function updateScheduledSendButtonState() {
+  const sendBtn = document.getElementById("finalSendWhatsAppBtn");
+  const textarea = document.getElementById("WhatsAppTextArea");
 
+  if (!sendBtn || !textarea) return;
+
+  const hasMessage = textarea.value.trim().length > 0;
+
+  sendBtn.disabled = !hasMessage;
+
+  if (hasMessage) {
+    sendBtn.classList.remove("disabled-send-WhatsApp-btn");
+    sendBtn.title = "Click to save this scheduled WhatsApp action into history.";
+  } else {
+    sendBtn.classList.add("disabled-send-WhatsApp-btn");
+    sendBtn.title = "Write a message first before sending.";
+  }
+}
 
 function attachFinalSendNowEvent() {
   const sendBtn = document.getElementById("finalSendNowWhatsAppBtn");
   if (!sendBtn) return;
 
   sendBtn.addEventListener("click", () => {
+    if (isEditingSendWhatsAppHistory) {
+      showSendNowInlineError(
+        "You are editing an existing history item. Use the fixed Save Changes button."
+      );
+      return;
+    }
+
     collectSendNowMessageDraft();
 
     const finalRows = getSendNowFinalRows();
@@ -1238,6 +1347,8 @@ WhatsAppDisplaySearchText = "";
 WhatsAppDraftFilterMonths = new Set();
 WhatsAppDraftSearchText = "";
 
+scheduledDuplicateWarnings = [];
+
 WhatsAppFormDraft = {
   hour: "19",
   minute: "00",
@@ -1301,10 +1412,19 @@ async function handleProcessWhatsAppFiles() {
       return;
     }
 
-    latestWhatsAppRows = mergedRows;
-    initializeSelectedWhatsAppMonths(mergedRows);
-    initializeSelectedWhatsAppRecipients(mergedRows);
-    renderWhatsAppReport(mergedRows, selectedWhatsAppFiles.length);
+latestWhatsAppRows = mergedRows;
+initializeSelectedWhatsAppMonths(mergedRows);
+initializeSelectedWhatsAppRecipients(mergedRows);
+
+scheduledDuplicateWarnings = findPreviouslyTextedWarnings(mergedRows);
+
+renderWhatsAppReport(mergedRows, selectedWhatsAppFiles.length);
+
+if (scheduledDuplicateWarnings.length > 0) {
+  setTimeout(() => {
+    showPreviouslyTextedPopup();
+  }, 150);
+}
   } catch (error) {
     console.error("Send WhatsApp processing failed:", error);
     showWhatsAppError(
@@ -1312,6 +1432,168 @@ async function handleProcessWhatsAppFiles() {
     );
   }
 }
+
+
+function handleSaveWhatsAppChanges() {
+  if (!isEditingSendWhatsAppHistory || !editingSendWhatsAppHistoryId) {
+    alert("No WhatsApp history item is currently being edited.");
+    return;
+  }
+
+  if (editingSendWhatsAppMode === "sendNow") {
+    saveSendNowHistoryChanges();
+    return;
+  }
+
+  if (editingSendWhatsAppMode === "scheduled") {
+    saveScheduledHistoryChanges();
+    return;
+  }
+
+  alert("This WhatsApp history item cannot be updated.");
+}
+
+
+function saveSendNowHistoryChanges() {
+  collectSendNowMessageDraft();
+
+  const finalRows = getSendNowFinalRows();
+
+  if (finalRows.length === 0) {
+    showSendNowInlineError("No recipients are selected. Please include at least one person.");
+    return;
+  }
+
+  if (!sendNowMessageDraft.trim()) {
+    updateSendNowButtonState();
+    showSendNowInlineError("Please write the WhatsApp message before saving changes.");
+    return;
+  }
+
+  const confirmed = confirm("Save these changes to this Send Right Now history item?");
+  if (!confirmed) return;
+
+  updateSendWhatsAppHistoryItem(editingSendWhatsAppHistoryId, {
+    mode: "sendNow",
+    fileName: getSendNowHistoryFileName(),
+    selectedMonths: ["Send Right Now"],
+    recipients: getDetailedRecipients(finalRows),
+    excludedRecipients: getDetailedRecipients(getExcludedSendNowRows()),
+    messageText: sendNowMessageDraft.trim(),
+    editPayload: {
+      mode: "sendNow",
+      rows: latestSendNowRows,
+      excludedRecipientKeys: [...excludedSendNowRecipientKeys],
+      messageText: sendNowMessageDraft.trim(),
+      searchText: sendNowAppliedSearch,
+    },
+  });
+
+  alert("Send Right Now history changes saved successfully.");
+
+  isEditingSendWhatsAppHistory = false;
+  editingSendWhatsAppHistoryId = "";
+  editingSendWhatsAppMode = "";
+  updateWhatsAppEditBarVisibility();
+}
+
+
+
+function saveScheduledHistoryChanges() {
+  const isValidTime = validateSendTimeInputs();
+  if (!isValidTime) return;
+
+  const selectedRows = getFilteredWhatsAppRows();
+
+  if (selectedRows.length === 0) {
+    showSendWhatsAppInlineError(
+      "Please select at least one person inside the selected month(s) before saving changes."
+    );
+    return;
+  }
+
+  const detailedRecipients = getDetailedRecipients(selectedRows);
+
+  if (detailedRecipients.length === 0) {
+    showSendWhatsAppInlineError(
+      "No valid phone numbers were found inside the selected people."
+    );
+    return;
+  }
+
+  const WhatsAppTextArea = document.getElementById("WhatsAppTextArea");
+  const messageText = WhatsAppTextArea ? WhatsAppTextArea.value.trim() : "";
+
+  if (!messageText) {
+    updateScheduledSendButtonState();
+    showSendWhatsAppInlineError("Please write the WhatsApp message before saving changes.");
+    return;
+  }
+
+  const hourInput = document.getElementById("WhatsAppHourInput");
+  const minuteInput = document.getElementById("WhatsAppMinuteInput");
+
+  const hour = hourInput ? hourInput.value.trim().padStart(2, "0") : "19";
+  const minute = minuteInput ? minuteInput.value.trim().padStart(2, "0") : "00";
+
+  const confirmed = confirm("Save these changes to this scheduled WhatsApp history item?");
+  if (!confirmed) return;
+
+  updateSendWhatsAppHistoryItem(editingSendWhatsAppHistoryId, {
+    mode: "scheduled",
+    campaignType: selectedScheduledCampaignType,
+    fileName: getScheduledWhatsAppHistoryFileName(),
+    selectedMonths: [...selectedWhatsAppMonths].map(toDisplaySheetName),
+    recipients: detailedRecipients,
+    excludedRecipients: getDetailedRecipients(getExcludedScheduledWhatsAppRows()),
+    messageText,
+    sendDateLabel: getScheduledHistoryDateLabel(),
+    sendTimeLabel: `${hour}:${minute}`,
+    scheduleStatus: "active",
+    cancelledAt: "",
+    editPayload: {
+      mode: "scheduled",
+      campaignType: selectedScheduledCampaignType,
+      rows: latestWhatsAppRows,
+      selectedMonths: [...selectedWhatsAppMonths],
+      selectedRecipientKeys: [...selectedWhatsAppRecipientKeys],
+      hour,
+      minute,
+      messageText,
+      displayFilterMonths: [...WhatsAppDisplayFilterMonths],
+      displaySearchText: WhatsAppDisplaySearchText,
+    },
+  });
+
+  alert("Scheduled WhatsApp history changes saved successfully.");
+
+  isEditingSendWhatsAppHistory = false;
+  editingSendWhatsAppHistoryId = "";
+  editingSendWhatsAppMode = "";
+  updateWhatsAppEditBarVisibility();
+}
+
+
+function updateWhatsAppEditBarVisibility() {
+  const editBar = document.getElementById("saveWhatsAppEditBar");
+
+  if (!editBar) return;
+
+  if (isEditingSendWhatsAppHistory) {
+    editBar.classList.remove("hidden");
+  } else {
+    editBar.classList.add("hidden");
+  }
+}
+
+function attachSaveWhatsAppChangesEvent() {
+  const saveBtn = document.getElementById("saveWhatsAppChangesBtn");
+  if (!saveBtn) return;
+
+  saveBtn.addEventListener("click", handleSaveWhatsAppChanges);
+}
+
+
 
 function validateWorkbookStructure(workbook, fileName = "Unknown file") {
   const originalSheetNames = Array.isArray(workbook?.SheetNames)
@@ -1504,24 +1786,20 @@ const sheetRows = XLSX.utils.sheet_to_json(worksheet, { defval: ""});
         const originalDobLabel = formatDateDDMMYYYY(parsedDob);
         const originalDobWeekday = getWeekdayName(parsedDob);
 
-        const reminderDate = getReminderDateThirtyDaysBefore(
-          parsedDob.getDate(),
-          parsedDob.getMonth() + 1,
-          currentYear
-        );
+const scheduleDate = getScheduledDateForCampaign(parsedDob, currentYear);
 
-        rows.push({
-          name,
-          phone,
-          originalDobLabel,
-          originalDobWeekday,
-          reminderDateLabel: formatDateDDMMYYYY(reminderDate),
-          reminderDateWeekday: getWeekdayName(reminderDate),
-          sheetName: requiredSheetName,
-          sourceFileName: fileName,
-          rowNumber: index + 2,
-          sortDate: reminderDate,
-        });
+rows.push({
+  name,
+  phone,
+  originalDobLabel,
+  originalDobWeekday,
+  reminderDateLabel: formatDateDDMMYYYY(scheduleDate),
+  reminderDateWeekday: getWeekdayName(scheduleDate),
+  sheetName: requiredSheetName,
+  sourceFileName: fileName,
+  rowNumber: index + 2,
+  sortDate: scheduleDate,
+});
       });
     });
   });
@@ -1583,25 +1861,21 @@ function extractWhatsAppRowsFromRandomWorkbook(fileName, workbook) {
 
       const birthdayMonthName = SELECTABLE_WhatsApp_MONTHS[parsedDob.getMonth()];
 
-      const reminderDate = getReminderDateThirtyDaysBefore(
-        parsedDob.getDate(),
-        parsedDob.getMonth() + 1,
-        currentYear
-      );
+const scheduleDate = getScheduledDateForCampaign(parsedDob, currentYear);
 
-      rows.push({
-        name: name || "Unknown",
-        phone,
-        originalDobLabel,
-        originalDobWeekday,
-        reminderDateLabel: formatDateDDMMYYYY(reminderDate),
-        reminderDateWeekday: getWeekdayName(reminderDate),
-        sheetName: birthdayMonthName,
-        sourceFileName: fileName,
-        sourceSheetName: sheetName,
-        rowNumber: index + 2,
-        sortDate: reminderDate,
-      });
+rows.push({
+  name: name || "Unknown",
+  phone,
+  originalDobLabel,
+  originalDobWeekday,
+  reminderDateLabel: formatDateDDMMYYYY(scheduleDate),
+  reminderDateWeekday: getWeekdayName(scheduleDate),
+  sheetName: birthdayMonthName,
+  sourceFileName: fileName,
+  sourceSheetName: sheetName,
+  rowNumber: index + 2,
+  sortDate: scheduleDate,
+});
     });
   });
 
@@ -1687,7 +1961,7 @@ const notSelectedPeopleCount = Math.max(
         class="WhatsApp-month-count-box ${
           isSelectable ? "WhatsApp-month-selectable" : "WhatsApp-month-disabled"
         } ${isSelected ? "selected" : ""}"
-        data-WhatsApp-month="${escapeHtml(sheetName)}"
+        data-whatsapp-month="${escapeHtml(sheetName)}"
         ${isSelectable ? "" : "disabled"}
         title="${
           isSelectable
@@ -1735,7 +2009,7 @@ ${
             )}
                   </p>
                   <p>
-                    <strong>Will send reminder in:</strong>
+                    <strong>${escapeHtml(getScheduledDateRowLabel())}</strong>
                     ${escapeHtml(row.reminderDateWeekday)} - ${escapeHtml(
               row.reminderDateLabel
             )}
@@ -1747,7 +2021,7 @@ ${
                   class="WhatsApp-toolbar-btn ${
                     isSelectedPerson ? "" : "WhatsApp-toolbar-btn-secondary"
                   }"
-                  data-WhatsApp-recipient-key="${escapeHtml(key)}"
+                  data-whatsapp-recipient-key="${escapeHtml(key)}"
                 >
                   ${isSelectedPerson ? "Selected" : "Select"}
                 </button>
@@ -1764,16 +2038,17 @@ ${
 
   container.innerHTML = `
     <div class="WhatsApp-summary-box">
-      <h2>WhatsApp Reminder Report</h2>
+<h2>${escapeHtml(getScheduledCampaignTitle())}</h2>
       <p>
         The system reviewed <strong>${rows.length}</strong> people with usable names and dates of birth
         from <strong>${filesCount}</strong> ${filesCount === 1 ? "file" : "files"}.
       </p>
 <p class="WhatsApp-summary-note">
-  The system supports generated monthly workbooks and random Excel files. If a random file is uploaded,
-  the system scans the file, detects dates of birth and phone numbers, then groups people by birthday month automatically.
+${escapeHtml(getScheduledCampaignSummaryText())}
 </p>
     </div>
+
+    ${renderPreviouslyTextedWarningLabel()}
 
     <div class="WhatsApp-month-selection-toolbar">
       <div class="WhatsApp-month-selection-info">
@@ -1864,7 +2139,7 @@ ${
             <input
               type="checkbox"
               value="${escapeHtml(month)}"
-              data-WhatsApp-demo-filter-month="${escapeHtml(month)}"
+              data-whatsapp-demo-filter-month="${escapeHtml(month)}"
               ${isChecked ? "checked" : ""}
             />
             <span>${toDisplaySheetName(month)}</span>
@@ -1950,7 +2225,8 @@ ${
         id="finalSendWhatsAppBtn"
         type="button"
         class="disabled-send-WhatsApp-btn"
-        title="Click to save this WhatsApp action into history."
+        disabled
+        title="Write a message first before sending."
       >
         Send WhatsApp for Selected People
       </button>
@@ -1964,20 +2240,28 @@ ${
     </p>
   `;
 
-attachMonthSelectionEvents();
-attachToolbarEvents();
-attachPeopleToolbarEvents();
-attachRecipientSelectionEvents();
-attachDemoFilterEvents();
-attachTimeValidationEvents();
+  attachMonthSelectionEvents();
+  attachToolbarEvents();
+  attachPeopleToolbarEvents();
+  attachRecipientSelectionEvents();
+  attachDemoFilterEvents();
+  attachTimeValidationEvents();
   attachFormDraftEvents();
+  attachPreviouslyTextedWarningEvents();
   validateSendTimeInputs();
 
-  const sendButton = document.getElementById("finalSendWhatsAppBtn");
-  if (sendButton) {
-    sendButton.addEventListener("click", () => {
-      const isValidTime = validateSendTimeInputs();
-      if (!isValidTime) return;
+const sendButton = document.getElementById("finalSendWhatsAppBtn");
+if (sendButton) {
+  sendButton.addEventListener("click", () => {
+    if (isEditingSendWhatsAppHistory) {
+      showSendWhatsAppInlineError(
+        "You are editing an existing history item. Use the fixed Save Changes button."
+      );
+      return;
+    }
+
+    const isValidTime = validateSendTimeInputs();
+    if (!isValidTime) return;
 
       const selectedRows = getFilteredWhatsAppRows();
       if (selectedRows.length === 0) {
@@ -2005,6 +2289,12 @@ attachTimeValidationEvents();
       const WhatsAppTextArea = document.getElementById("WhatsAppTextArea");
       const messageText = WhatsAppTextArea ? WhatsAppTextArea.value.trim() : "";
 
+      if (!messageText) {
+  updateScheduledSendButtonState();
+  showSendWhatsAppInlineError("Please write the WhatsApp message before sending.");
+  return;
+}
+
       const hourInput = document.getElementById("WhatsAppHourInput");
       const minuteInput = document.getElementById("WhatsAppMinuteInput");
 
@@ -2015,16 +2305,18 @@ attachTimeValidationEvents();
 
       saveSendWhatsAppHistory({
         mode: "scheduled",
+        campaignType: selectedScheduledCampaignType,
         fileName: getScheduledWhatsAppHistoryFileName(),
         selectedMonths: [...selectedWhatsAppMonths].map(toDisplaySheetName),
         fromNumber,
 recipients: detailedRecipients,
 excludedRecipients: getDetailedRecipients(getExcludedScheduledWhatsAppRows()),
 messageText,
-sendDateLabel: "One month before each selected birthday",
+sendDateLabel: getScheduledHistoryDateLabel(),
 sendTimeLabel: `${hour}:${minute}`,
 editPayload: {
   mode: "scheduled",
+  campaignType: selectedScheduledCampaignType,
   rows: latestWhatsAppRows,
   selectedMonths: [...selectedWhatsAppMonths],
   selectedRecipientKeys: [...selectedWhatsAppRecipientKeys],
@@ -2042,9 +2334,9 @@ editPayload: {
 }
 
 function attachMonthSelectionEvents() {
-  document.querySelectorAll("[data-WhatsApp-month]").forEach((button) => {
+  document.querySelectorAll("[data-whatsapp-month]").forEach((button) => {
     button.addEventListener("click", () => {
-      const month = normalizeSheetName(button.dataset.WhatsAppMonth || "");
+      const month = normalizeSheetName(button.dataset.whatsappMonth || "");
       if (!month || !SELECTABLE_WhatsApp_MONTHS.includes(month)) return;
 
       collectWhatsAppFormDraft();
@@ -2125,11 +2417,11 @@ function attachPeopleToolbarEvents() {
 }
 
 function attachRecipientSelectionEvents() {
-  document.querySelectorAll("[data-WhatsApp-recipient-key]").forEach((button) => {
+  document.querySelectorAll("[data-whatsapp-recipient-key]").forEach((button) => {
     button.addEventListener("click", () => {
       collectWhatsAppFormDraft();
 
-      const key = button.dataset.WhatsAppRecipientKey || "";
+      const key = button.dataset.whatsappRecipientKey || "";
       if (!key) return;
 
       if (selectedWhatsAppRecipientKeys.has(key)) {
@@ -2144,11 +2436,11 @@ function attachRecipientSelectionEvents() {
 }
 
 function attachDemoFilterEvents() {
-  document.querySelectorAll("[data-WhatsApp-demo-filter-month]").forEach((checkbox) => {
+  document.querySelectorAll("[data-whatsapp-demo-filter-month]").forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       collectWhatsAppFormDraft();
 
-      const month = normalizeSheetName(checkbox.dataset.WhatsAppDemoFilterMonth || "");
+      const month = normalizeSheetName(checkbox.dataset.whatsappDemoFilterMonth || "");
       if (!month || !SELECTABLE_WhatsApp_MONTHS.includes(month)) return;
 
       if (checkbox.checked) {
@@ -2296,8 +2588,14 @@ function attachFormDraftEvents() {
   }
 
   if (WhatsAppTextArea) {
-    WhatsAppTextArea.addEventListener("input", collectWhatsAppFormDraft);
+    WhatsAppTextArea.addEventListener("input", () => {
+      collectWhatsAppFormDraft();
+      updateScheduledSendButtonState();
+    });
   }
+
+
+  updateScheduledSendButtonState();
 }
 
 function collectWhatsAppFormDraft() {
@@ -2601,6 +2899,35 @@ function getReminderDateThirtyDaysBefore(day, month, currentYear) {
   return birthdayInCurrentYear;
 }
 
+function getScheduledDateForCampaign(parsedDob, currentYear) {
+if (selectedScheduledCampaignType === SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY) {
+  return getClampedBirthdayForCurrentYear(
+    parsedDob.getDate(),
+    parsedDob.getMonth() + 1,
+    currentYear
+  );
+}
+
+  return getReminderDateThirtyDaysBefore(
+    parsedDob.getDate(),
+    parsedDob.getMonth() + 1,
+    currentYear
+  );
+}
+
+function updateScheduledCampaignHeader() {
+  const titleEl = document.getElementById("WhatsAppCurrentScheduledTitle");
+  const descriptionEl = document.getElementById("WhatsAppCurrentScheduledDescription");
+
+  if (titleEl) {
+    titleEl.textContent = getScheduledCampaignTitle();
+  }
+
+  if (descriptionEl) {
+    descriptionEl.textContent = getScheduledCampaignSummaryText();
+  }
+}
+
 function getClampedBirthdayForCurrentYear(day, month, year) {
   const lastDayOfMonth = new Date(year, month, 0).getDate();
   const safeDay = Math.min(day, lastDayOfMonth);
@@ -2609,6 +2936,42 @@ function getClampedBirthdayForCurrentYear(day, month, year) {
 
 function getWeekdayName(date) {
   return date.toLocaleDateString(undefined, { weekday: "long" });
+}
+
+function getScheduledCampaignTitle() {
+  return selectedScheduledCampaignType === SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY
+    ? "Wish your clients a happy birthday"
+    : "Do your birthday with BoomClub";
+}
+
+function getScheduledCampaignSummaryText() {
+  return selectedScheduledCampaignType === SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY
+    ? "This mode prepares birthday wishes on the client birthday date. No 30-day reminder calculation is applied."
+    : "This mode prepares BoomClub birthday reminders 30 days before each birthday.";
+}
+
+function getScheduledCampaignLabel(campaignType) {
+  if (campaignType === SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY) {
+    return "Wish your clients a happy birthday";
+  }
+
+  if (campaignType === SCHEDULE_CAMPAIGN_BOOMCLUB) {
+    return "Do your birthday with BoomClub";
+  }
+
+  return "Scheduled WhatsApp";
+}
+
+function getScheduledDateRowLabel() {
+  return selectedScheduledCampaignType === SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY
+    ? "Birthday date:"
+    : "Will send reminder in:";
+}
+
+function getScheduledHistoryDateLabel() {
+  return selectedScheduledCampaignType === SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY
+    ? "On each client birthday date"
+    : "30 days before each selected birthday";
 }
 
 function normalizeSheetName(name) {
@@ -2642,6 +3005,231 @@ function readFileAsArrayBuffer(file) {
 
     reader.readAsArrayBuffer(file);
   });
+}
+
+function renderPreviouslyTextedWarningLabel() {
+  if (!scheduledDuplicateWarnings.length) return "";
+
+  return `
+    <button
+      type="button"
+      id="previouslyTextedWarningBtn"
+      class="previously-texted-warning-label"
+    >
+      ${scheduledDuplicateWarnings.length} person/people were already used in this same scheduled campaign. Click to review.
+    </button>
+  `;
+}
+
+function attachPreviouslyTextedWarningEvents() {
+  const warningBtn = document.getElementById("previouslyTextedWarningBtn");
+  if (!warningBtn) return;
+
+  warningBtn.addEventListener("click", showPreviouslyTextedPopup);
+}
+
+function findPreviouslyTextedWarnings(rows) {
+  const history = getSendWhatsAppHistory();
+  const previousByPhone = new Map();
+
+  history.forEach((item) => {
+    if (item.mode !== "scheduled") return;
+    if (item.scheduleStatus === "cancelled") return;
+
+    const itemCampaignType =
+      item.campaignType || item.editPayload?.campaignType || "";
+
+    if (itemCampaignType !== selectedScheduledCampaignType) return;
+
+    const recipients = Array.isArray(item.recipients) ? item.recipients : [];
+
+    recipients.forEach((recipient) => {
+      const phone = normalizePhoneForHistoryCompare(recipient.phone);
+      if (!phone) return;
+
+      if (!previousByPhone.has(phone)) {
+        previousByPhone.set(phone, {
+          previousName: recipient.name || "Unknown",
+          previousPhone: recipient.phone || "",
+          sentDate: item.sendDateLabel || formatHistoryCreatedAt(item.createdAt),
+          sentTime: item.sendTimeLabel || "",
+          messageText: item.messageText || "",
+          mode: item.mode || "scheduled",
+          campaignType: itemCampaignType,
+          campaignLabel: getScheduledCampaignLabel(itemCampaignType),
+        });
+      }
+    });
+  });
+
+  const warnings = [];
+  const seenCurrentRows = new Set();
+
+  rows.forEach((row) => {
+    const phone = normalizePhoneForHistoryCompare(row.phone);
+    if (!phone) return;
+
+    const previous = previousByPhone.get(phone);
+    if (!previous) return;
+
+    const rowKey = getWhatsAppRecipientKey(row);
+    if (seenCurrentRows.has(rowKey)) return;
+
+    seenCurrentRows.add(rowKey);
+
+    warnings.push({
+      rowKey,
+      name: row.name || "Unknown",
+      phone: row.phone || "",
+      sourceFileName: row.sourceFileName || "",
+      sourceSheetName: row.sourceSheetName || "",
+      rowNumber: row.rowNumber || "",
+      ...previous,
+    });
+  });
+
+  return warnings;
+}
+
+function normalizePhoneForHistoryCompare(phone) {
+  return String(phone || "").replace(/\D/g, "");
+}
+
+function formatHistoryCreatedAt(value) {
+  if (!value) return "unknown date";
+
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return "unknown date";
+  }
+}
+
+function showPreviouslyTextedPopup() {
+  if (!scheduledDuplicateWarnings.length) return;
+
+  let modal = document.getElementById("previouslyTextedModal");
+
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "previouslyTextedModal";
+    modal.className = "previously-texted-modal";
+    document.body.appendChild(modal);
+  }
+
+const popupTitle =
+  scheduledDuplicateWarnings.length === 1
+    ? `You texted ${scheduledDuplicateWarnings[0].name} before`
+    : `${scheduledDuplicateWarnings.length} people were already used in this same scheduled campaign`;
+
+  modal.innerHTML = `
+    <div class="previously-texted-backdrop"></div>
+
+    <div class="previously-texted-dialog">
+      <button type="button" class="previously-texted-close-btn" id="closePreviouslyTextedModalBtn">
+        ✕
+      </button>
+
+      <h2>
+        ${escapeHtml(popupTitle)}
+      </h2>
+
+      <p class="previously-texted-main-message">
+        The system found ${scheduledDuplicateWarnings.length} person/people in this file
+        who were texted before.
+      </p>
+
+      <div class="previously-texted-list">
+        ${scheduledDuplicateWarnings
+          .map((warning) => {
+            return `
+              <div class="previously-texted-card">
+                <h3>You texted ${escapeHtml(warning.name)} before</h3>
+
+                <p>
+                  You texted <strong>${escapeHtml(warning.name)}</strong> before,
+                  who has this number <strong>${escapeHtml(warning.phone)}</strong>,
+                  in this exact date <strong>${escapeHtml(warning.sentDate)}</strong>
+                  ${warning.sentTime ? `at <strong>${escapeHtml(warning.sentTime)}</strong>` : ""}.
+                </p>
+
+                <p>
+                  Be sure you want to double text or remove him/her from this section.
+                </p>
+
+                <small>
+                  Previous campaign: ${escapeHtml(warning.campaignLabel || "Scheduled WhatsApp")}
+                  ${
+                    warning.sourceFileName
+                      ? ` | Current file: ${escapeHtml(warning.sourceFileName)}`
+                      : ""
+                  }
+                  ${
+                    warning.sourceSheetName
+                      ? ` | Sheet: ${escapeHtml(warning.sourceSheetName)}`
+                      : ""
+                  }
+                  ${
+                    warning.rowNumber
+                      ? ` | Row: ${escapeHtml(warning.rowNumber)}`
+                      : ""
+                  }
+                </small>
+
+                <button
+                  type="button"
+                  class="previously-texted-remove-btn"
+                  data-remove-duplicate-key="${escapeHtml(warning.rowKey)}"
+                >
+                  Remove from this send
+                </button>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+
+  modal.classList.add("show");
+
+  const closeBtn = document.getElementById("closePreviouslyTextedModalBtn");
+  const backdrop = modal.querySelector(".previously-texted-backdrop");
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closePreviouslyTextedPopup);
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closePreviouslyTextedPopup);
+  }
+
+  modal.querySelectorAll("[data-remove-duplicate-key]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.removeDuplicateKey;
+      if (!key) return;
+
+      selectedWhatsAppRecipientKeys.delete(key);
+      scheduledDuplicateWarnings = scheduledDuplicateWarnings.filter(
+        (warning) => warning.rowKey !== key
+      );
+
+      renderWhatsAppReport(latestWhatsAppRows, selectedWhatsAppFiles.length);
+
+      if (scheduledDuplicateWarnings.length > 0) {
+        showPreviouslyTextedPopup();
+      } else {
+        closePreviouslyTextedPopup();
+      }
+    });
+  });
+}
+
+function closePreviouslyTextedPopup() {
+  const modal = document.getElementById("previouslyTextedModal");
+  if (!modal) return;
+
+  modal.classList.remove("show");
 }
 
 function escapeHtml(value) {

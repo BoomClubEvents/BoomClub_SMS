@@ -86,6 +86,27 @@ export function getHistoryItemById(id) {
   return getHistory().find((item) => item.id === id) || null;
 }
 
+export function updateSendWhatsAppHistoryItem(id, updatedData = {}) {
+  const history = getHistory();
+
+  const updatedHistory = history.map((item) => {
+    if (item.id !== id) {
+      return item;
+    }
+
+    return {
+      ...item,
+      ...updatedData,
+      id: item.id,
+      type: item.type,
+      createdAt: item.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
+}
+
 export function saveEditDraft(data) {
   sessionStorage.setItem(EDIT_DRAFT_KEY, JSON.stringify(data));
 }
@@ -145,6 +166,7 @@ export function getSendSmsHistory() {
 
 export function saveSendWhatsAppHistory({
   mode = "scheduled",
+  campaignType = "",
   fileName = "",
   selectedMonths = [],
   fromNumber,
@@ -162,6 +184,7 @@ export function saveSendWhatsAppHistory({
     id: generateId(),
     type: "sendWhatsApp",
     mode,
+    campaignType,
     fileName,
     selectedMonths,
     fromNumber,
@@ -183,6 +206,24 @@ export function getSendWhatsAppHistory() {
   return getHistory().filter(
     (item) => item.type === "sendWhatsApp" || item.type === "sendSms"
   );
+}
+
+export function cancelScheduledWhatsAppHistoryItem(id) {
+  const history = getHistory();
+
+  const updatedHistory = history.map((item) => {
+    if (item.id !== id) {
+      return item;
+    }
+
+    return {
+      ...item,
+      scheduleStatus: "cancelled",
+      cancelledAt: new Date().toISOString(),
+    };
+  });
+
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
 }
 
 const ADMIN_PASSWORD_STORAGE_KEY = "boomclub_admin_password";

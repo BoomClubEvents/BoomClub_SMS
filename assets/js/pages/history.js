@@ -4,6 +4,7 @@ import {
   getDateHistory,
   getSendWhatsAppHistory,
   saveEditDraft,
+  cancelScheduledWhatsAppHistoryItem,
 } from "../storage.js";
 import {
   downloadGroupedWorkbook,
@@ -11,6 +12,9 @@ import {
 } from "../exportExcel.js";
 import { openStoredFilesPreview } from "../previewModal.js";
 import { formatFullDateTime, getMinutesAgoText } from "../utils.js";
+
+const SCHEDULE_CAMPAIGN_BOOMCLUB = "boomclubBirthday";
+const SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY = "clientBirthday";
 
 export function initHistoryPage() {
   renderMonthHistory();
@@ -32,7 +36,10 @@ function bindHistoryEvents() {
   const showScheduledWhatsAppHistoryBtn = document.getElementById("showScheduledWhatsAppHistoryBtn");
   const backToSendWhatsAppHistoryChooserFromNow = document.getElementById("backToSendWhatsAppHistoryChooserFromNow");
   const backToSendWhatsAppHistoryChooserFromScheduled = document.getElementById("backToSendWhatsAppHistoryChooserFromScheduled");
-
+  const showBoomClubScheduledHistoryBtn = document.getElementById("showBoomClubScheduledHistoryBtn");
+  const showClientBirthdayScheduledHistoryBtn = document.getElementById("showClientBirthdayScheduledHistoryBtn");
+  const backToScheduledCampaignChooserFromBoomClub = document.getElementById("backToScheduledCampaignChooserFromBoomClub");
+  const backToScheduledCampaignChooserFromClientBirthday = document.getElementById("backToScheduledCampaignChooserFromClientBirthday");
 
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener("click", clearHistory);
@@ -76,6 +83,21 @@ if (backToSendWhatsAppHistoryChooserFromNow) {
 
 if (backToSendWhatsAppHistoryChooserFromScheduled) {
   backToSendWhatsAppHistoryChooserFromScheduled.addEventListener("click", showSendWhatsAppHistoryChooser);
+}
+if (showBoomClubScheduledHistoryBtn) {
+  showBoomClubScheduledHistoryBtn.addEventListener("click", showBoomClubScheduledHistoryPanel);
+}
+
+if (showClientBirthdayScheduledHistoryBtn) {
+  showClientBirthdayScheduledHistoryBtn.addEventListener("click", showClientBirthdayScheduledHistoryPanel);
+}
+
+if (backToScheduledCampaignChooserFromBoomClub) {
+  backToScheduledCampaignChooserFromBoomClub.addEventListener("click", showScheduledCampaignChooser);
+}
+
+if (backToScheduledCampaignChooserFromClientBirthday) {
+  backToScheduledCampaignChooserFromClientBirthday.addEventListener("click", showScheduledCampaignChooser);
 }
 }
 
@@ -137,6 +159,8 @@ function showSendWhatsAppHistoryChooser() {
   if (chooser) chooser.classList.remove("hidden");
   if (sendNowPanel) sendNowPanel.classList.add("hidden");
   if (scheduledPanel) scheduledPanel.classList.add("hidden");
+
+  hideScheduledCampaignPanels();
 }
 
 function showSendNowWhatsAppHistoryPanel() {
@@ -157,7 +181,50 @@ function showScheduledWhatsAppHistoryPanel() {
   if (chooser) chooser.classList.add("hidden");
   if (sendNowPanel) sendNowPanel.classList.add("hidden");
   if (scheduledPanel) scheduledPanel.classList.remove("hidden");
+
+  showScheduledCampaignChooser();
 }
+
+  function showScheduledCampaignChooser() {
+  const campaignChooser = document.getElementById("scheduledWhatsAppCampaignChooser");
+  const boomClubPanel = document.getElementById("boomClubScheduledHistoryPanel");
+  const clientBirthdayPanel = document.getElementById("clientBirthdayScheduledHistoryPanel");
+
+  if (campaignChooser) campaignChooser.classList.remove("hidden");
+  if (boomClubPanel) boomClubPanel.classList.add("hidden");
+  if (clientBirthdayPanel) clientBirthdayPanel.classList.add("hidden");
+}
+
+function showBoomClubScheduledHistoryPanel() {
+  const campaignChooser = document.getElementById("scheduledWhatsAppCampaignChooser");
+  const boomClubPanel = document.getElementById("boomClubScheduledHistoryPanel");
+  const clientBirthdayPanel = document.getElementById("clientBirthdayScheduledHistoryPanel");
+
+  if (campaignChooser) campaignChooser.classList.add("hidden");
+  if (boomClubPanel) boomClubPanel.classList.remove("hidden");
+  if (clientBirthdayPanel) clientBirthdayPanel.classList.add("hidden");
+}
+
+function showClientBirthdayScheduledHistoryPanel() {
+  const campaignChooser = document.getElementById("scheduledWhatsAppCampaignChooser");
+  const boomClubPanel = document.getElementById("boomClubScheduledHistoryPanel");
+  const clientBirthdayPanel = document.getElementById("clientBirthdayScheduledHistoryPanel");
+
+  if (campaignChooser) campaignChooser.classList.add("hidden");
+  if (boomClubPanel) boomClubPanel.classList.add("hidden");
+  if (clientBirthdayPanel) clientBirthdayPanel.classList.remove("hidden");
+}
+
+function hideScheduledCampaignPanels() {
+  const campaignChooser = document.getElementById("scheduledWhatsAppCampaignChooser");
+  const boomClubPanel = document.getElementById("boomClubScheduledHistoryPanel");
+  const clientBirthdayPanel = document.getElementById("clientBirthdayScheduledHistoryPanel");
+
+  if (campaignChooser) campaignChooser.classList.add("hidden");
+  if (boomClubPanel) boomClubPanel.classList.add("hidden");
+  if (clientBirthdayPanel) clientBirthdayPanel.classList.add("hidden");
+}
+
 
 function renderMonthHistory() {
   const container = document.getElementById("historyMonthContent");
@@ -218,12 +285,31 @@ function renderDateHistory() {
 
 function renderSendWhatsAppHistory() {
   const sendNowContainer = document.getElementById("historySendNowWhatsAppContent");
-  const scheduledContainer = document.getElementById("historyScheduledWhatsAppContent");
+  const boomClubScheduledContainer = document.getElementById("historyBoomClubScheduledContent");
+  const clientBirthdayScheduledContainer = document.getElementById("historyClientBirthdayScheduledContent");
 
   const history = getSendWhatsAppHistory();
 
   const sendNowHistory = history.filter((item) => item.mode === "sendNow");
-  const scheduledHistory = history.filter((item) => item.mode === "scheduled");
+
+  const boomClubScheduledHistory = history.filter((item) => {
+    if (item.mode !== "scheduled") return false;
+
+    const campaignType =
+      item.campaignType ||
+      item.editPayload?.campaignType ||
+      SCHEDULE_CAMPAIGN_BOOMCLUB;
+
+    return campaignType === SCHEDULE_CAMPAIGN_BOOMCLUB;
+  });
+
+  const clientBirthdayScheduledHistory = history.filter((item) => {
+    if (item.mode !== "scheduled") return false;
+
+    const campaignType = item.campaignType || item.editPayload?.campaignType || "";
+
+    return campaignType === SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY;
+  });
 
   renderSendWhatsAppHistoryGroup(
     sendNowContainer,
@@ -233,10 +319,17 @@ function renderSendWhatsAppHistory() {
   );
 
   renderSendWhatsAppHistoryGroup(
-    scheduledContainer,
-    scheduledHistory,
-    "No Scheduled WhatsApp history yet.",
-    "Your scheduled WhatsApp birthday reminders will appear here."
+    boomClubScheduledContainer,
+    boomClubScheduledHistory,
+    "No Do your birthday with BoomClub history yet.",
+    "Your BoomClub birthday reminder schedules will appear here."
+  );
+
+  renderSendWhatsAppHistoryGroup(
+    clientBirthdayScheduledContainer,
+    clientBirthdayScheduledHistory,
+    "No client birthday wish history yet.",
+    "Your client birthday wish schedules will appear here."
   );
 }
 
@@ -352,11 +445,38 @@ function createHistoryCard(item, mode) {
   return card;
 }
 
+function getWhatsAppHistoryModeLabel(item) {
+  if (item.mode === "sendNow") {
+    return "Send Right Now";
+  }
+
+  const campaignType = item.campaignType || item.editPayload?.campaignType || "";
+
+  if (campaignType === SCHEDULE_CAMPAIGN_BOOMCLUB) {
+    return "Do your birthday with BoomClub";
+  }
+
+  if (campaignType === SCHEDULE_CAMPAIGN_CLIENT_BIRTHDAY) {
+    return "Wish your clients a happy birthday";
+  }
+
+  return "Scheduled";
+}
+
 function createSendWhatsAppHistoryCard(item) {
   const card = document.createElement("div");
   card.className = "history-file-card WhatsApp-history-card";
 
-  const modeLabel = item.mode === "sendNow" ? "Send Right Now" : "Scheduled";
+const modeLabel = getWhatsAppHistoryModeLabel(item);
+
+const isScheduled = item.mode === "scheduled";
+const isScheduleCancelled = item.scheduleStatus === "cancelled";
+const scheduleStatusLabel = isScheduled
+  ? isScheduleCancelled
+    ? "Cancelled"
+    : "Active"
+  : "Not scheduled";
+
 
   const recipients = Array.isArray(item.recipients) ? item.recipients : [];
   const excludedRecipients = Array.isArray(item.excludedRecipients)
@@ -394,6 +514,16 @@ function createSendWhatsAppHistoryCard(item) {
       <p><strong>From:</strong> ${escapeHtml(item.fromNumber || "Not specified")}</p>
       <p><strong>Send date:</strong> ${escapeHtml(item.sendDateLabel || "Not specified")}</p>
       <p><strong>Send time:</strong> ${escapeHtml(item.sendTimeLabel || "Not specified")}</p>
+
+      ${
+  isScheduled
+    ? `<p><strong>Schedule status:</strong> <span class="${
+        isScheduleCancelled ? "history-status-cancelled" : "history-status-active"
+      }">${escapeHtml(scheduleStatusLabel)}</span></p>`
+    : ""
+}
+
+
       <p><strong>Total sent recipients:</strong> ${recipients.length}</p>
       <p><strong>Total not sent / excluded:</strong> ${excludedRecipients.length}</p>
     </div>
@@ -444,21 +574,43 @@ function createSendWhatsAppHistoryCard(item) {
 >
   ${excludedPreview}
 </ul>
-    <div class="history-card-actions">
-      <button
-        type="button"
-        class="history-action-btn history-edit-btn"
-        data-edit-send-whatsapp-id="${escapeHtml(item.id)}"
-      >
-        Edit
-      </button>
-    </div>
+<div class="history-card-actions">
+  <button
+    type="button"
+    class="history-action-btn history-edit-btn"
+    data-edit-send-whatsapp-id="${escapeHtml(item.id)}"
+  >
+    Edit
+  </button>
+
+  ${
+    isScheduled
+      ? `
+        <button
+          type="button"
+          class="history-action-btn history-cancel-schedule-btn"
+          data-cancel-scheduled-whatsapp-id="${escapeHtml(item.id)}"
+          ${isScheduleCancelled ? "disabled" : ""}
+        >
+          ${isScheduleCancelled ? "Schedule Cancelled" : "Cancel Scheduled Message"}
+        </button>
+      `
+      : ""
+  }
+</div>
   `;
 
 const editBtn = card.querySelector("[data-edit-send-whatsapp-id]");
 if (editBtn) {
   editBtn.addEventListener("click", () => {
     openSendWhatsAppHistoryEdit(item);
+  });
+}
+
+const cancelScheduleBtn = card.querySelector("[data-cancel-scheduled-whatsapp-id]");
+if (cancelScheduleBtn) {
+  cancelScheduleBtn.addEventListener("click", () => {
+    cancelScheduledWhatsAppFromHistory(item);
   });
 }
 
@@ -672,6 +824,29 @@ function openSendWhatsAppHistoryEdit(historyItem) {
   });
 
   navigateToPage("send-sms");
+}
+
+function cancelScheduledWhatsAppFromHistory(historyItem) {
+  if (!historyItem || historyItem.mode !== "scheduled") {
+    return;
+  }
+
+  if (historyItem.scheduleStatus === "cancelled") {
+    alert("This scheduled message is already cancelled.");
+    return;
+  }
+
+  const confirmed = confirm(
+    "Are you sure you want to cancel this scheduled WhatsApp message? The history will stay saved, but this message will not be sent anymore."
+  );
+
+  if (!confirmed) return;
+
+  cancelScheduledWhatsAppHistoryItem(historyItem.id);
+
+  renderSendWhatsAppHistory();
+
+  alert("Scheduled WhatsApp message cancelled successfully.");
 }
 
 function navigateToPage(pageName) {

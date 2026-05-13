@@ -28,16 +28,56 @@
       </button>
     </div>
 
+    <!-- SCHEDULE TYPE CHOOSER -->
+<div id="WhatsAppScheduleChoicePanel" class="WhatsApp-mode-panel hidden">
+  <button id="backToWhatsAppModesFromScheduleChoiceBtn" type="button" class="WhatsApp-back-btn">
+    ← Back
+  </button>
+
+  <div class="send-WhatsApp-upload-box">
+    <h2>Choose Scheduled WhatsApp Type</h2>
+    <p class="WhatsApp-summary-note">
+      Choose what kind of scheduled WhatsApp message you want to prepare.
+    </p>
+  </div>
+
+  <div class="WhatsApp-mode-chooser WhatsApp-schedule-type-chooser">
+    <button id="WhatsAppBoomClubBirthdayBtn" type="button" class="WhatsApp-mode-card">
+      <span class="WhatsApp-mode-icon">🎉</span>
+      <strong>Do your birthday with BoomClub</strong>
+      <small>
+        Sends the reminder 30 days before each birthday.
+      </small>
+    </button>
+
+    <button id="WhatsAppClientBirthdayBtn" type="button" class="WhatsApp-mode-card">
+      <span class="WhatsApp-mode-icon">🎂</span>
+      <strong>Wish your clients a happy birthday</strong>
+      <small>
+        Sends birthday wishes without calculating a 30-day reminder date.
+      </small>
+    </button>
+  </div>
+</div>
+
     <!-- SCHEDULE FLOW -->
     <div id="WhatsAppSchedulePanel" class="WhatsApp-mode-panel hidden">
       <button id="backToWhatsAppModesBtn" type="button" class="WhatsApp-back-btn">
-        ← Back
+        ← Back to Scheduled Options
       </button>
 
-      <div class="send-WhatsApp-upload-box">
-        <label class="send-WhatsApp-label" for="WhatsAppFileInput">
-          Upload Excel file (.xlsx only)
-        </label>
+<div class="send-WhatsApp-upload-box">
+  <div class="WhatsApp-current-campaign-box">
+    <span>Scheduled option</span>
+    <h2 id="WhatsAppCurrentScheduledTitle">Do your birthday with BoomClub</h2>
+    <p id="WhatsAppCurrentScheduledDescription">
+      This mode prepares BoomClub birthday reminders 30 days before each birthday.
+    </p>
+  </div>
+
+  <label class="send-WhatsApp-label" for="WhatsAppFileInput">
+    Upload Excel file (.xlsx only)
+  </label>
 
         <input type="file" id="WhatsAppFileInput" accept=".xlsx" multiple />
 
@@ -84,4 +124,15 @@
       <div id="sendNowReportContainer" class="WhatsApp-report-container"></div>
     </div>
   </div>
+
+  <div id="saveWhatsAppEditBar" class="save-whatsapp-edit-bar hidden">
+  <div>
+    <strong>Edit mode</strong>
+    <span>You are editing a saved WhatsApp history item.</span>
+  </div>
+
+  <button id="saveWhatsAppChangesBtn" type="button">
+    Save Changes
+  </button>
+</div>
 </section>

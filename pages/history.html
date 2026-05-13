@@ -89,8 +89,41 @@
     </button>
   </div>
 
-  <p>WhatsApp birthday reminder messages scheduled for later.</p>
-  <div id="historyScheduledWhatsAppContent"></div>
+<p>Choose which scheduled WhatsApp history you want to view.</p>
+
+<div id="scheduledWhatsAppCampaignChooser" class="history-home-view">
+  <button id="showBoomClubScheduledHistoryBtn" class="history-choice-btn" type="button">
+    Do your birthday with BoomClub
+  </button>
+
+  <button id="showClientBirthdayScheduledHistoryBtn" class="history-choice-btn" type="button">
+    Wish your clients a happy birthday
+  </button>
+</div>
+
+<div id="boomClubScheduledHistoryPanel" class="history-detail-view hidden">
+  <div class="history-section-header">
+    <h3>Do your birthday with BoomClub History</h3>
+    <button id="backToScheduledCampaignChooserFromBoomClub" class="back-history-btn" type="button">
+      Back
+    </button>
+  </div>
+
+  <p>Scheduled BoomClub birthday reminder messages.</p>
+  <div id="historyBoomClubScheduledContent"></div>
+</div>
+
+<div id="clientBirthdayScheduledHistoryPanel" class="history-detail-view hidden">
+  <div class="history-section-header">
+    <h3>Wish your clients a happy birthday History</h3>
+    <button id="backToScheduledCampaignChooserFromClientBirthday" class="back-history-btn" type="button">
+      Back
+    </button>
+  </div>
+
+  <p>Scheduled client birthday wish messages.</p>
+  <div id="historyClientBirthdayScheduledContent"></div>
+</div>
 </div>
     </div>
   </div>
