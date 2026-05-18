@@ -4,6 +4,7 @@ import { initFilterByDatePage } from "./pages/filterByDate.js";
 import { initHistoryPage } from "./pages/history.js";
 import { initSendWhatsAppPage } from "./pages/sendSms.js";
 import { initAdminAccountPage } from "./pages/adminAccount.js";
+import { initFileFixerPage } from "./pages/fileFixer.js";
 
 const pageContent = () => document.getElementById("pageContent");
 const sidebar = () => document.getElementById("sidebar");
@@ -31,6 +32,10 @@ const pageConfig = {
     htmlPath: "./pages/send-sms.html",
     init: initSendWhatsAppPage,
   },
+  "file-fixer": {
+  htmlPath: "./pages/file-fixer.html",
+  init: initFileFixerPage,
+},
   "admin-account": {
     htmlPath: "./pages/admin-account.html",
     init: initAdminAccountPage,

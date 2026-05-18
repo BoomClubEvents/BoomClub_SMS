@@ -1,0 +1,30 @@
+<section class="page-section">
+  <div class="container">
+    <div class="file-fixer-header">
+      <div>
+        <h1>File Fixer</h1>
+        <p>
+          Upload messy company Excel files, organize values inside each same row, and download a cleaned _FIXED version.
+        </p>
+      </div>
+    </div>
+
+    <div class="file-fixer-upload-box">
+      <label class="file-fixer-label" for="fileFixerInput">
+        Upload Excel file (.xlsx only)
+      </label>
+
+      <input type="file" id="fileFixerInput" accept=".xlsx" multiple />
+
+      <div id="fileFixerSelectedFiles" class="file-fixer-selected-file"></div>
+
+      <div id="fileFixerErrorLabel" class="file-fixer-error-label" aria-live="polite"></div>
+
+      <button id="processFileFixerBtn" type="button">
+        Process File
+      </button>
+    </div>
+
+    <div id="fileFixerReportContainer" class="file-fixer-report-container"></div>
+  </div>
+</section>

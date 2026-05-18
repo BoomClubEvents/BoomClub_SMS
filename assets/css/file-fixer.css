@@ -1,0 +1,169 @@
+.file-fixer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.file-fixer-upload-box,
+.file-fixer-summary-box,
+.file-fixer-report-card {
+  margin-top: 24px;
+  background: #FFF8E1;
+  border: 1px solid #FFE08A;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.file-fixer-label {
+  display: block;
+  font-weight: 600;
+  color: #A61B1B;
+  margin-bottom: 10px;
+}
+
+.file-fixer-selected-file {
+  margin-top: 14px;
+}
+
+.file-fixer-selected-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.file-fixer-file-pill {
+  background: #FFF3C4;
+  border: 1px solid #FFE08A;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: #5C3A00;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.file-fixer-file-pill-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.file-fixer-file-name {
+  cursor: pointer;
+  text-decoration: underline;
+  color: #A61B1B;
+  word-break: break-word;
+}
+
+.file-fixer-file-name:hover {
+  color: #D62828;
+}
+
+.file-fixer-file-pill-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-fixer-small-action-btn,
+.file-fixer-small-remove-btn,
+.file-fixer-preview-all-btn {
+  margin-top: 0;
+}
+
+.file-fixer-small-remove-btn {
+  min-width: 38px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.file-fixer-preview-all-btn {
+  margin-top: 14px;
+}
+
+.file-fixer-error-label {
+  display: none;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #E53935;
+  background: #FFE5E5;
+  color: #B71C1C;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.file-fixer-error-label.show {
+  display: block;
+}
+
+.file-fixer-report-container {
+  margin-top: 30px;
+}
+
+.file-fixer-report-grid {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.file-fixer-report-card {
+  background: white;
+}
+
+.file-fixer-report-card h3 {
+  margin-bottom: 12px;
+  color: #A61B1B;
+}
+
+.file-fixer-report-card p {
+  margin-bottom: 8px;
+}
+
+.file-fixer-download-btn {
+  margin-top: 16px;
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .file-fixer-report-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .file-fixer-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .file-fixer-upload-box,
+  .file-fixer-summary-box,
+  .file-fixer-report-card {
+    padding: 16px;
+  }
+
+  .file-fixer-file-pill {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .file-fixer-file-pill-actions {
+    width: 100%;
+  }
+
+  .file-fixer-small-action-btn,
+  .file-fixer-small-remove-btn,
+  .file-fixer-preview-all-btn {
+    width: 100%;
+  }
+}
