@@ -7,15 +7,20 @@ const FIXED_HEADERS = [
   "Name",
   "Phone number -1-",
   "Phone number -2-",
+  "Description",
   "Line number-1-",
   "Line number-2-",
   "Line number-3-",
   "Line number-4-",
   "Location",
-  "Description",
   "E-mail",
   "Website",
 ];
+
+const FILE_FIXER_MODE_SAME_SHEETS = "sameSheets";
+const FILE_FIXER_MODE_ONE_SHEET = "oneSheet";
+
+let selectedFileFixerMode = FILE_FIXER_MODE_SAME_SHEETS;
 
 export function initFileFixerPage() {
   const fileInput = document.getElementById("fileFixerInput");
@@ -28,6 +33,44 @@ export function initFileFixerPage() {
   if (processBtn) {
     processBtn.addEventListener("click", handleProcessFileFixerFiles);
   }
+
+  const sameSheetsModeBtn = document.getElementById("sameSheetsModeBtn");
+const oneSheetModeBtn = document.getElementById("oneSheetModeBtn");
+
+if (sameSheetsModeBtn) {
+  sameSheetsModeBtn.addEventListener("click", () => {
+    selectedFileFixerMode = FILE_FIXER_MODE_SAME_SHEETS;
+    updateFileFixerModeButtons();
+    clearFileFixerReport();
+    clearFileFixerError();
+  });
+}
+
+if (oneSheetModeBtn) {
+  oneSheetModeBtn.addEventListener("click", () => {
+    selectedFileFixerMode = FILE_FIXER_MODE_ONE_SHEET;
+    updateFileFixerModeButtons();
+    clearFileFixerReport();
+    clearFileFixerError();
+  });
+}
+
+updateFileFixerModeButtons();
+
+function updateFileFixerModeButtons() {
+  const sameSheetsModeBtn = document.getElementById("sameSheetsModeBtn");
+  const oneSheetModeBtn = document.getElementById("oneSheetModeBtn");
+
+  sameSheetsModeBtn?.classList.toggle(
+    "active",
+    selectedFileFixerMode === FILE_FIXER_MODE_SAME_SHEETS
+  );
+
+  oneSheetModeBtn?.classList.toggle(
+    "active",
+    selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET
+  );
+}
 
   renderSelectedFileFixerFiles();
   clearFileFixerError();
@@ -201,8 +244,11 @@ async function handleProcessFileFixerFiles() {
     for (const file of selectedFileFixerFiles) {
       const fileData = await readFileAsArrayBuffer(file);
 const workbook = XLSX.read(fileData, { type: "array" });
-      const fixedResult = fixWorkbook(file, workbook);
-      latestFileFixerResults.push(fixedResult);
+const fixedResult =
+  selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET
+    ? fixWorkbookIntoOneSheet(file, workbook)
+    : fixWorkbook(file, workbook);
+          latestFileFixerResults.push(fixedResult);
 
       downloadWorkbook(fixedResult.fixedWorkbook, fixedResult.fixedFileName);
     }
@@ -306,6 +352,85 @@ fixedSheet["!cols"] = buildFixedColumnWidths();
   };
 }
 
+
+function fixWorkbookIntoOneSheet(file, workbook) {
+  const fixedWorkbook = XLSX.utils.book_new();
+
+  let totalRows = 0;
+  let filledRows = 0;
+  let emptyRows = 0;
+  let movedPhones = 0;
+  let movedEmails = 0;
+  let movedWebsites = 0;
+  let duplicateRows = 0;
+
+  const allFixedRowResults = [];
+
+  workbook.SheetNames.forEach((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName];
+    if (!worksheet) return;
+
+    const matrix = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      defval: "",
+      raw: true,
+      blankrows: true,
+    });
+
+    const dataRows = matrix.slice(1);
+
+    dataRows.forEach((row) => {
+      totalRows++;
+
+      if (isRowEmpty(row)) {
+        emptyRows++;
+        return;
+      }
+
+      filledRows++;
+
+      const fixedRowResult = fixSingleRow(row);
+      allFixedRowResults.push(fixedRowResult);
+
+      movedPhones += fixedRowResult.movedPhones;
+      movedEmails += fixedRowResult.movedEmails;
+      movedWebsites += fixedRowResult.movedWebsites;
+    });
+  });
+
+  const mergedRows = mergeDuplicateCompanyRows(allFixedRowResults);
+
+  duplicateRows = Math.max(allFixedRowResults.length - mergedRows.length, 0);
+
+  const fixedRows = [FIXED_HEADERS];
+
+  mergedRows
+    .sort(sortFixedRows)
+    .forEach((fixedRow) => {
+      fixedRows.push(fixedRow);
+    });
+
+  const fixedSheet = XLSX.utils.aoa_to_sheet(fixedRows);
+  styleFixedHeaderRow(fixedSheet);
+  fixedSheet["!cols"] = buildFixedColumnWidths();
+
+  XLSX.utils.book_append_sheet(fixedWorkbook, fixedSheet, "Fixed Companies");
+
+  return {
+    originalFileName: file.name,
+    fixedFileName: buildFixedFileName(file.name),
+    originalSizeBytes: file.size,
+    fixedWorkbook,
+    totalRows,
+    filledRows,
+    emptyRows,
+    duplicateRows,
+    movedPhones,
+    movedEmails,
+    movedWebsites,
+  };
+}
+
 function mergeDuplicateCompanyRows(fixedRowResults) {
   const grouped = new Map();
 
@@ -327,10 +452,12 @@ function mergeDuplicateCompanyRows(fixedRowResults) {
 
     mergeUniqueCell(existingRow, row, 1);  // Phone 1
     mergeUniqueCell(existingRow, row, 2);  // Phone 2
-    mergeUniqueCell(existingRow, row, 3);  // Line 1
-    mergeUniqueCell(existingRow, row, 4);  // Line 2
-    mergeUniqueCell(existingRow, row, 5);  // Line 3
-    mergeUniqueCell(existingRow, row, 6);  // Line 4
+    mergeDescription(existingRow, row);
+mergeUniqueCell(existingRow, row, 4);  // Line 1
+mergeUniqueCell(existingRow, row, 5);  // Line 2
+mergeUniqueCell(existingRow, row, 6);  // Line 3
+mergeUniqueCell(existingRow, row, 7);  // Line 4
+mergeUniqueCell(existingRow, row, 8);  // Location
     mergeUniqueCell(existingRow, row, 7);  // Location
     mergeDescription(existingRow, row);
     mergeUniqueCell(existingRow, row, 9);  // Email
@@ -342,7 +469,7 @@ function mergeDuplicateCompanyRows(fixedRowResults) {
 
 function buildCompanyMergeKey(row) {
   const name = normalizeValue(row[0]).toLowerCase();
-  const location = normalizeValue(row[7]).toLowerCase();
+const location = normalizeValue(row[8]).toLowerCase();
   const email = normalizeValue(row[9]).toLowerCase();
   const website = normalizeValue(row[10]).toLowerCase();
 
@@ -372,13 +499,13 @@ function mergeUniqueCell(existingRow, newRow, columnIndex) {
 }
 
 function mergeDescription(existingRow, newRow) {
-  const existingDescription = normalizeValue(existingRow[8]);
-  const newDescription = normalizeValue(newRow[8]);
+const existingDescription = normalizeValue(existingRow[3]);
+const newDescription = normalizeValue(newRow[3]);
 
   if (!newDescription) return;
 
   if (!existingDescription) {
-    existingRow[8] = newDescription;
+existingRow[3] = newDescription;
     return;
   }
 
@@ -393,7 +520,7 @@ function mergeDescription(existingRow, newRow) {
 
   newParts.forEach((part) => {
     if (!existingParts.includes(part.toLowerCase())) {
-      existingRow[8] += ` | ${part}`;
+existingRow[3] += ` | ${part}`;
     }
   });
 }
@@ -450,15 +577,16 @@ function fixSingleRow(row) {
 
   fixedRow[1] = phones[0] || "";
   fixedRow[2] = phones[1] || "";
-  fixedRow[3] = phones[2] || "";
-  fixedRow[4] = phones[3] || "";
-  fixedRow[5] = phones[4] || "";
-  fixedRow[6] = phones[5] || "";
+fixedRow[3] = buildDescription(remainingText, fixedRow[0], fixedRow[8]);
 
-  fixedRow[7] = pickLocation(remainingText, values);
-  fixedRow[8] = buildDescription(remainingText, fixedRow[0], fixedRow[7]);
-  fixedRow[9] = emails[0] || "";
-  fixedRow[10] = websites[0] || "";
+fixedRow[4] = phones[2] || "";
+fixedRow[5] = phones[3] || "";
+fixedRow[6] = phones[4] || "";
+fixedRow[7] = phones[5] || "";
+
+fixedRow[8] = pickLocation(remainingText, values);
+fixedRow[9] = emails[0] || "";
+fixedRow[10] = websites[0] || "";
 
   return {
     fixedRow,
