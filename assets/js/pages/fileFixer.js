@@ -22,9 +22,20 @@ const FILE_FIXER_MODE_ONE_SHEET = "oneSheet";
 
 let selectedFileFixerMode = FILE_FIXER_MODE_SAME_SHEETS;
 
+const FILE_FIXER_MAIN_MODE_FIX = "fix";
+const FILE_FIXER_MAIN_MODE_ORGANIZE = "organize";
+
+let selectedFileFixerMainMode = FILE_FIXER_MAIN_MODE_FIX;
+let selectedOrganizeFilterFile = null;
+
+
 export function initFileFixerPage() {
   const fileInput = document.getElementById("fileFixerInput");
   const processBtn = document.getElementById("processFileFixerBtn");
+  const fixMessedFileModeBtn = document.getElementById("fixMessedFileModeBtn");
+const organizeFilterModeBtn = document.getElementById("organizeFilterModeBtn");
+const organizeFilterInput = document.getElementById("organizeFilterInput");
+const processOrganizeFilterBtn = document.getElementById("processOrganizeFilterBtn");
 
   if (fileInput) {
     fileInput.addEventListener("change", handleFileFixerFileSelection);
@@ -33,6 +44,19 @@ export function initFileFixerPage() {
   if (processBtn) {
     processBtn.addEventListener("click", handleProcessFileFixerFiles);
   }
+
+  fixMessedFileModeBtn?.addEventListener("click", () => {
+  selectedFileFixerMainMode = FILE_FIXER_MAIN_MODE_FIX;
+  updateMainFileFixerMode();
+});
+
+organizeFilterModeBtn?.addEventListener("click", () => {
+  selectedFileFixerMainMode = FILE_FIXER_MAIN_MODE_ORGANIZE;
+  updateMainFileFixerMode();
+});
+
+organizeFilterInput?.addEventListener("change", handleOrganizeFilterFileSelection);
+processOrganizeFilterBtn?.addEventListener("click", handleProcessOrganizeFilterFile);
 
   const sameSheetsModeBtn = document.getElementById("sameSheetsModeBtn");
 const oneSheetModeBtn = document.getElementById("oneSheetModeBtn");
@@ -71,10 +95,100 @@ function updateFileFixerModeButtons() {
     selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET
   );
 }
-
+updateMainFileFixerMode();
   renderSelectedFileFixerFiles();
   clearFileFixerError();
   clearFileFixerReport();
+}
+
+function updateMainFileFixerMode() {
+  document.getElementById("fixMessedFileModeBtn")?.classList.toggle(
+    "active",
+    selectedFileFixerMainMode === FILE_FIXER_MAIN_MODE_FIX
+  );
+
+  document.getElementById("organizeFilterModeBtn")?.classList.toggle(
+    "active",
+    selectedFileFixerMainMode === FILE_FIXER_MAIN_MODE_ORGANIZE
+  );
+
+  document.getElementById("fixMessedFileSection")?.classList.toggle(
+    "file-fixer-hidden",
+    selectedFileFixerMainMode !== FILE_FIXER_MAIN_MODE_FIX
+  );
+
+  document.getElementById("organizeFilterSection")?.classList.toggle(
+    "file-fixer-hidden",
+    selectedFileFixerMainMode !== FILE_FIXER_MAIN_MODE_ORGANIZE
+  );
+
+  clearFileFixerError();
+  clearOrganizeFilterError();
+  clearFileFixerReport();
+}
+
+function handleOrganizeFilterFileSelection(event) {
+  const file = event.target.files?.[0];
+
+  selectedOrganizeFilterFile = file || null;
+
+  const selectedFileEl = document.getElementById("organizeFilterSelectedFile");
+  if (selectedFileEl) {
+    selectedFileEl.innerHTML = file
+      ? `<strong>Selected file:</strong> ${escapeHtml(file.name)}`
+      : "";
+  }
+
+  clearOrganizeFilterError();
+  clearFileFixerReport();
+}
+
+function clearOrganizeFilterError() {
+  const errorEl = document.getElementById("organizeFilterErrorLabel");
+  if (!errorEl) return;
+
+  errorEl.innerHTML = "";
+  errorEl.classList.remove("show");
+}
+
+function showOrganizeFilterError(message) {
+  const errorEl = document.getElementById("organizeFilterErrorLabel");
+  if (!errorEl) return;
+
+  errorEl.innerHTML = message;
+  errorEl.classList.add("show");
+}
+
+async function handleProcessOrganizeFilterFile() {
+  clearOrganizeFilterError();
+  clearFileFixerReport();
+
+  if (!selectedOrganizeFilterFile) {
+    showOrganizeFilterError("Please upload one .xlsx file first.");
+    return;
+  }
+
+  if (!selectedOrganizeFilterFile.name.toLowerCase().endsWith(".xlsx")) {
+    showOrganizeFilterError("Only .xlsx files are allowed.");
+    return;
+  }
+
+  try {
+    const fileData = await readFileAsArrayBuffer(selectedOrganizeFilterFile);
+    const workbook = XLSX.read(fileData, { type: "array" });
+
+    const organizedWorkbook = organizeWorkbookByKeywords(workbook);
+
+    downloadWorkbook(
+      organizedWorkbook,
+      buildOrganizedFileName(selectedOrganizeFilterFile.name)
+    );
+  } catch (error) {
+    console.error("Organizer failed:", error);
+    showOrganizeFilterError(
+      `Could not organize the file.<br><br><strong>Real error:</strong> ${escapeHtml(error.message || error)}`
+    );
+  }
 }
 
 function handleFileFixerFileSelection(event) {
@@ -317,7 +431,9 @@ dataRows.forEach((row) => {
   movedWebsites += fixedRowResult.movedWebsites;
 });
 
-const mergedRows = mergeDuplicateCompanyRows(fixedRowResults);
+const mergedRows = removeDuplicatePhonesAcrossRows(
+  mergeDuplicateCompanyRows(fixedRowResults)
+);
 
 duplicateRows += Math.max(fixedRowResults.length - mergedRows.length, 0);
 
@@ -398,7 +514,9 @@ function fixWorkbookIntoOneSheet(file, workbook) {
     });
   });
 
-  const mergedRows = mergeDuplicateCompanyRows(allFixedRowResults);
+const mergedRows = removeDuplicatePhonesAcrossRows(
+  mergeDuplicateCompanyRows(allFixedRowResults)
+);
 
   duplicateRows = Math.max(allFixedRowResults.length - mergedRows.length, 0);
 
@@ -431,6 +549,39 @@ function fixWorkbookIntoOneSheet(file, workbook) {
   };
 }
 
+function removeDuplicatePhonesAcrossRows(rows) {
+  const seenPhones = new Set();
+  const phoneColumnIndexes = [1, 2, 4, 5, 6, 7];
+
+  return rows.map((row) => {
+    const cleanPhones = [];
+
+    phoneColumnIndexes.forEach((index) => {
+      const phones = extractPhonesFromText(row[index]);
+
+      phones.forEach((phone) => {
+        const phoneKey = normalizePhoneForCompare(phone);
+
+        if (!seenPhones.has(phoneKey)) {
+          seenPhones.add(phoneKey);
+          addUniquePhone(cleanPhones, phone);
+        }
+      });
+
+      row[index] = "";
+    });
+
+    row[1] = cleanPhones[0] || "";
+    row[2] = cleanPhones[1] || "";
+    row[4] = cleanPhones[2] || "";
+    row[5] = cleanPhones[3] || "";
+    row[6] = cleanPhones[4] || "";
+    row[7] = cleanPhones[5] || "";
+
+    return row;
+  });
+}
+
 function mergeDuplicateCompanyRows(fixedRowResults) {
   const grouped = new Map();
 
@@ -450,18 +601,14 @@ function mergeDuplicateCompanyRows(fixedRowResults) {
 
     const existingRow = grouped.get(key);
 
-    mergeUniqueCell(existingRow, row, 1);  // Phone 1
-    mergeUniqueCell(existingRow, row, 2);  // Phone 2
+mergePhoneCells(existingRow, row);
     mergeDescription(existingRow, row);
-mergeUniqueCell(existingRow, row, 4);  // Line 1
-mergeUniqueCell(existingRow, row, 5);  // Line 2
-mergeUniqueCell(existingRow, row, 6);  // Line 3
-mergeUniqueCell(existingRow, row, 7);  // Line 4
+mergePhoneCells(existingRow, row);
+mergeDescription(existingRow, row);
 mergeUniqueCell(existingRow, row, 8);  // Location
-    mergeUniqueCell(existingRow, row, 7);  // Location
-    mergeDescription(existingRow, row);
-    mergeUniqueCell(existingRow, row, 9);  // Email
-    mergeUniqueCell(existingRow, row, 10); // Website
+mergeUniqueCell(existingRow, row, 9);  // Email
+mergeUniqueCell(existingRow, row, 10); // Website
+sanitizeFixedPhoneColumns(existingRow);
   });
 
   return [...grouped.values()];
@@ -555,38 +702,47 @@ function fixSingleRow(row) {
   values.forEach((value) => {
     if (!value) return;
 
-    if (isEmail(value)) {
-      addUnique(emails, value);
+    const extractedPhones = extractPhonesFromText(value);
+
+    extractedPhones.forEach((phone) => {
+      addUniquePhone(phones, phone);
+    });
+
+    let valueWithoutPhones = removeExtractedPhonesFromText(value, extractedPhones);
+
+    if (isEmail(valueWithoutPhones)) {
+      addUnique(emails, valueWithoutPhones);
       return;
     }
 
-    if (isWebsite(value)) {
-      addUnique(websites, value);
+    if (isWebsite(valueWithoutPhones)) {
+      addUnique(websites, valueWithoutPhones);
       return;
     }
 
-    if (isPhoneLike(value)) {
-      addUnique(phones, cleanPhone(value));
-      return;
-    }
+    valueWithoutPhones = normalizeValue(valueWithoutPhones);
 
-    remainingText.push(value);
+    if (valueWithoutPhones) {
+      remainingText.push(valueWithoutPhones);
+    }
   });
 
   fixedRow[0] = pickName(values, remainingText);
+  fixedRow[8] = pickLocation(remainingText, values);
 
   fixedRow[1] = phones[0] || "";
   fixedRow[2] = phones[1] || "";
-fixedRow[3] = buildDescription(remainingText, fixedRow[0], fixedRow[8]);
+  fixedRow[3] = buildDescription(remainingText, fixedRow[0], fixedRow[8]);
 
-fixedRow[4] = phones[2] || "";
-fixedRow[5] = phones[3] || "";
-fixedRow[6] = phones[4] || "";
-fixedRow[7] = phones[5] || "";
+  fixedRow[4] = phones[2] || "";
+  fixedRow[5] = phones[3] || "";
+  fixedRow[6] = phones[4] || "";
+  fixedRow[7] = phones[5] || "";
 
-fixedRow[8] = pickLocation(remainingText, values);
-fixedRow[9] = emails[0] || "";
-fixedRow[10] = websites[0] || "";
+  fixedRow[9] = emails[0] || "";
+  fixedRow[10] = websites[0] || "";
+
+  sanitizeFixedPhoneColumns(fixedRow);
 
   return {
     fixedRow,
@@ -871,19 +1027,35 @@ function isWebsite(value) {
 }
 
 function isPhoneLike(value) {
-  const text = normalizeValue(value);
+  return extractPhonesFromText(value).length > 0;
+}
+function sanitizeFixedPhoneColumns(fixedRow) {
+  const phoneColumnIndexes = [1, 2, 4, 5, 6, 7];
+  const cleanPhones = [];
 
-  if (!text) return false;
+  phoneColumnIndexes.forEach((index) => {
+    const value = normalizeValue(fixedRow[index]);
+    const phones = extractPhonesFromText(value);
 
-  if (isEmail(text) || isWebsite(text)) return false;
+    phones.forEach((phone) => {
+      addUniquePhone(cleanPhones, phone);
+    });
 
-  const digits = text.replace(/\D/g, "");
+    fixedRow[index] = "";
+  });
 
-  return digits.length >= 6 && digits.length <= 15;
+  fixedRow[1] = cleanPhones[0] || "";
+  fixedRow[2] = cleanPhones[1] || "";
+  fixedRow[4] = cleanPhones[2] || "";
+  fixedRow[5] = cleanPhones[3] || "";
+  fixedRow[6] = cleanPhones[4] || "";
+  fixedRow[7] = cleanPhones[5] || "";
 }
 
+
 function cleanPhone(value) {
-  return normalizeValue(value);
+  const phones = extractPhonesFromText(value);
+  return phones[0] || "";
 }
 
 function normalizePhoneForCompare(value) {
@@ -892,7 +1064,6 @@ function normalizePhoneForCompare(value) {
 
 function addUnique(list, value) {
   const cleanValue = normalizeValue(value);
-
   if (!cleanValue) return;
 
   const exists = list.some(
@@ -902,6 +1073,403 @@ function addUnique(list, value) {
   if (!exists) {
     list.push(cleanValue);
   }
+}
+
+function addUniquePhone(list, value) {
+  const cleanValue = normalizeValue(value);
+  if (!cleanValue) return;
+
+  const compareValue = normalizePhoneForCompare(cleanValue);
+
+  const exists = list.some(
+    (item) => normalizePhoneForCompare(item) === compareValue
+  );
+
+  if (!exists) {
+    list.push(cleanValue);
+  }
+}
+
+function mergePhoneCells(existingRow, newRow) {
+  const phoneColumnIndexes = [1, 2, 4, 5, 6, 7];
+  const phones = [];
+
+  phoneColumnIndexes.forEach((index) => {
+    extractPhonesFromText(existingRow[index]).forEach((phone) => {
+      addUniquePhone(phones, phone);
+    });
+
+    extractPhonesFromText(newRow[index]).forEach((phone) => {
+      addUniquePhone(phones, phone);
+    });
+
+    existingRow[index] = "";
+  });
+
+  existingRow[1] = phones[0] || "";
+  existingRow[2] = phones[1] || "";
+  existingRow[4] = phones[2] || "";
+  existingRow[5] = phones[3] || "";
+  existingRow[6] = phones[4] || "";
+  existingRow[7] = phones[5] || "";
+}
+
+function extractPhonesFromText(value) {
+  const text = normalizeValue(value);
+  if (!text) return [];
+
+  if (isEmail(text) || isWebsite(text)) return [];
+
+  const results = [];
+
+  const blockedText = text.toLowerCase();
+
+  const phonePattern =
+    /(?:\+?\s*961|00961)?[\s.\-/()]*\d{1,2}[\s.\-/()]*\d{3}[\s.\-/()]*\d{3,4}(?:[\s.\-/]*\d{1,4})?/g;
+
+  const matches = text.match(phonePattern) || [];
+
+  matches.forEach((match) => {
+    const normalized = normalizeLebanesePhone(match, blockedText);
+
+    if (normalized) {
+      addUniquePhone(results, normalized);
+    }
+  });
+
+  return results;
+}
+
+function normalizeLebanesePhone(value, fullText = "") {
+  let text = normalizeValue(value);
+
+  if (!text) return "";
+
+  const lowerFullText = normalizeValue(fullText).toLowerCase();
+
+
+
+  let digits = text.replace(/\D/g, "");
+
+  if (!digits) return "";
+
+  if (digits.startsWith("00961")) {
+    digits = "961" + digits.slice(5);
+  }
+
+  if (digits.startsWith("961")) {
+    const localPart = digits.slice(3);
+
+    if (!isValidLebaneseLocalNumber(localPart)) {
+      return "";
+    }
+
+    return formatLebanesePhone(localPart);
+  }
+
+  if (digits.startsWith("0")) {
+    const localPart = digits.slice(1);
+
+    if (!isValidLebaneseLocalNumber(localPart)) {
+      return "";
+    }
+
+    return formatLebanesePhone(localPart);
+  }
+
+  if (isValidLebaneseLocalNumber(digits)) {
+    return formatLebanesePhone(digits);
+  }
+
+  return "";
+}
+
+function isValidLebaneseLocalNumber(localPart) {
+  if (!/^\d+$/.test(localPart)) return false;
+
+  if (localPart.length === 6) {
+    return /^[1-9]/.test(localPart);
+  }
+
+  if (localPart.length === 7) {
+    return /^[1-9]/.test(localPart);
+  }
+
+  if (localPart.length === 8) {
+    return /^(3|70|71|76|78|79|81)\d{6}$/.test(localPart);
+  }
+
+  return false;
+}
+
+function formatLebanesePhone(localPart) {
+  if (localPart.length === 8) {
+    return `+ 961 ${localPart.slice(0, 2)}-${localPart.slice(2)}`;
+  }
+
+  return `+ 961 ${localPart.slice(0, 1)}-${localPart.slice(1)}`;
+}
+
+function removeExtractedPhonesFromText(value, phones) {
+  let text = normalizeValue(value);
+
+  phones.forEach((phone) => {
+    const digits = normalizePhoneForCompare(phone);
+    if (!digits) return;
+
+    const localDigits = digits.startsWith("961") ? digits.slice(3) : digits;
+
+    const possibleForms = [
+      digits,
+      `00${digits}`,
+      localDigits,
+      `0${localDigits}`,
+    ];
+
+    possibleForms.forEach((form) => {
+      const loosePattern = form.split("").join("[\\s.\\-/()]*");
+      text = text.replace(new RegExp(loosePattern, "g"), " ");
+    });
+  });
+
+  return text.replace(/\s+/g, " ").trim();
+}
+
+
+const ORGANIZER_CATEGORIES = [
+  { sheetName: "Fournisseur", keywords: ["fournisseur", "supplier"] },
+  { sheetName: "Client", keywords: ["client", "old client", "old clients"] },
+  { sheetName: "Ucmas", keywords: ["ucmas"] },
+  { sheetName: "Acmas", keywords: ["acmas"] },
+  { sheetName: "Colonie", keywords: ["colonie", "colony"] },
+  { sheetName: "Event", keywords: ["event", "events"] },
+  { sheetName: "Entertainment", keywords: ["entertainment"] },
+  { sheetName: "Companies", keywords: ["company", "companies", "corporate"] },
+  { sheetName: "Catering", keywords: ["catering"] },
+  { sheetName: "Restaurant", keywords: ["restaurant", "resto"] },
+  { sheetName: "Hotel", keywords: ["hotel", "resort"] },
+  { sheetName: "Club", keywords: ["club", "night club", "nightclub"] },
+  { sheetName: "Beach", keywords: ["beach"] },
+  { sheetName: "Moniteur", keywords: ["moniteur"] },
+  { sheetName: "Monitrice", keywords: ["monitrice"] },
+  { sheetName: "Birthday", keywords: ["birthday", "anniversaire"] },
+  { sheetName: "Festival", keywords: ["festival"] },
+  { sheetName: "Family", keywords: ["pere", "père", "mere", "mère", "soeur", "sister", "father", "mother"] },
+  { sheetName: "Schools", keywords: ["ecole", "école", "school", "schools", "sabis", "eastwood", "sagesse", "abts", "st "] },
+  { sheetName: "Municipality", keywords: ["municipality", "municipalities", "mun.", "municipal"] },
+  { sheetName: "Playground", keywords: ["playground"] },
+  { sheetName: "PR", keywords: ["pr"] },
+  { sheetName: "Mme", keywords: ["mme", "madame", "à mme", "c mme"] },
+  { sheetName: "Mr", keywords: ["mr", "monsieur", "à mr"] },
+  { sheetName: "UN", keywords: ["un", "united nations"] },
+  { sheetName: "Mouvement", keywords: ["mouvement", "movement"] },
+  { sheetName: "Charite", keywords: ["charite", "charity", "charité"] },
+  { sheetName: "Marketing", keywords: ["marketing"] },
+  { sheetName: "DJ Music", keywords: ["dj", "music", "musique"] },
+  { sheetName: "Equipment", keywords: ["equipment", "materiel", "matériel"] },
+  { sheetName: "Immeuble Office", keywords: ["immeuble", "office", "bureau"] },
+  { sheetName: "Inflatables", keywords: ["inflatable", "inflatables", "gonflable"] },
+  { sheetName: "Lions", keywords: ["lions"] },
+  { sheetName: "Mecanicien", keywords: ["mecanicien", "mécanicien", "mechanic"] },
+  { sheetName: "Trip Adventure Rappel", keywords: ["trip", "sorti", "sortie", "adventure", "rappel"] },
+  { sheetName: "Elio", keywords: ["elio"] },
+  { sheetName: "Kfarnabrakh", keywords: ["kfarnabrakh"] },
+  { sheetName: "Army", keywords: ["lieutenant", "commandant", "colonel", "army", "armee", "armée"] },
+  { sheetName: "Maison Home", keywords: ["maison", "home"] },
+  { sheetName: "Church", keywords: ["church", "eglise", "église"] },
+  { sheetName: "Character", keywords: ["character", "personnage"] },
+  { sheetName: "Khayyat", keywords: ["khayyat"] },
+  { sheetName: "Shows", keywords: ["show", "dog", "juggler", "breakdance", "stilts", "dancer", "danse"] },
+  { sheetName: "CV", keywords: ["cv"] },
+  { sheetName: "Scout", keywords: ["scout"] },
+  { sheetName: "Assistant", keywords: ["assistant"] },
+  { sheetName: "Decoration", keywords: ["decoration", "décoration"] },
+  { sheetName: "Universite", keywords: ["universite", "université", "university"] },
+  { sheetName: "Artistics", keywords: ["artistics", "artist", "artiste"] },
+  { sheetName: "Storium", keywords: ["storium"] },
+  { sheetName: "Mall", keywords: ["mall"] },
+  { sheetName: "Dance", keywords: ["dance", "danse"] },
+  { sheetName: "Food Stands", keywords: ["pop corn", "popcorn", "cotton candy", "ice cream"] },
+  { sheetName: "Kermes", keywords: ["kermes", "kermesse"] },
+  { sheetName: "Bank", keywords: ["bank", "banque"] },
+  { sheetName: "TV Show", keywords: ["tv show", "television", "télévision"] },
+  { sheetName: "January", keywords: ["january", "janvier", "jan"] },
+  { sheetName: "February", keywords: ["february", "fevrier", "février", "fev", "fév"] },
+  { sheetName: "March", keywords: ["march", "mars", "mar"] },
+  { sheetName: "April", keywords: ["april", "avril", "apr"] },
+  { sheetName: "May", keywords: ["may", "mai"] },
+  { sheetName: "June", keywords: ["june", "juin", "jun"] },
+  { sheetName: "July", keywords: ["july", "juillet", "jul"] },
+  { sheetName: "August", keywords: ["august", "aout", "août", "aug"] },
+  { sheetName: "September", keywords: ["september", "septembre", "sep", "sept"] },
+  { sheetName: "October", keywords: ["october", "octobre", "oct"] },
+  { sheetName: "November", keywords: ["november", "novembre", "nov"] },
+  { sheetName: "December", keywords: ["december", "decembre", "décembre", "dec", "déc"] },
+];
+
+function organizeWorkbookByKeywords(workbook) {
+  const organizedWorkbook = XLSX.utils.book_new();
+  const groupedRows = new Map();
+
+  ORGANIZER_CATEGORIES.forEach((category) => {
+    groupedRows.set(category.sheetName, []);
+  });
+
+  groupedRows.set("Uncategorized", []);
+
+  workbook.SheetNames.forEach((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName];
+    if (!worksheet) return;
+
+    const matrix = XLSX.utils.sheet_to_json(worksheet, {
+      header: 1,
+      defval: "",
+      raw: true,
+      blankrows: false,
+    });
+
+    if (matrix.length === 0) return;
+
+    const headers = matrix[0].map((header, index) =>
+      normalizeValue(header) || `Column ${index + 1}`
+    );
+
+    const dataRows = matrix.slice(1);
+
+    dataRows.forEach((row) => {
+      if (isRowEmpty(row)) return;
+
+      const normalizedRow = {};
+      headers.forEach((header, index) => {
+        normalizedRow[header] = row[index] ?? "";
+      });
+
+      normalizedRow["Source Sheet"] = sheetName;
+
+      const matchedCategories = findMatchingOrganizerCategories(row);
+
+      if (matchedCategories.length === 0) {
+        groupedRows.get("Uncategorized").push(normalizedRow);
+        return;
+      }
+
+      matchedCategories.forEach((categoryName) => {
+        groupedRows.get(categoryName).push(normalizedRow);
+      });
+    });
+  });
+
+  groupedRows.forEach((rows, sheetName) => {
+    if (rows.length === 0) return;
+
+    const headers = collectOrganizerHeaders(rows);
+    const sheet = createOrganizerSheet(rows, headers);
+
+    XLSX.utils.book_append_sheet(
+      organizedWorkbook,
+      sheet,
+      safeSheetName(sheetName)
+    );
+  });
+
+  return organizedWorkbook;
+}
+
+function findMatchingOrganizerCategories(row) {
+  const rowText = normalizeForKeywordSearch(row.join(" "));
+  const matches = [];
+
+  ORGANIZER_CATEGORIES.forEach((category) => {
+    const hasMatch = category.keywords.some((keyword) => {
+      const normalizedKeyword = normalizeForKeywordSearch(keyword);
+      return rowText.includes(normalizedKeyword);
+    });
+
+    if (hasMatch) {
+      matches.push(category.sheetName);
+    }
+  });
+
+  return [...new Set(matches)];
+}
+
+function normalizeForKeywordSearch(value) {
+  return normalizeValue(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function collectOrganizerHeaders(rows) {
+  const headers = [];
+
+  rows.forEach((row) => {
+    Object.keys(row).forEach((key) => {
+      if (!headers.includes(key)) {
+        headers.push(key);
+      }
+    });
+  });
+
+  return headers;
+}
+
+function createOrganizerSheet(rows, headers) {
+  const normalizedRows = rows.map((row) => {
+    const next = {};
+
+    headers.forEach((header) => {
+      next[header] = row[header] ?? "";
+    });
+
+    return next;
+  });
+
+  const sheet = XLSX.utils.json_to_sheet(normalizedRows, {
+    header: headers,
+  });
+
+  styleOrganizerHeaderRow(sheet, headers);
+  sheet["!cols"] = headers.map((header) => ({
+    wch: Math.max(16, String(header).length + 3),
+  }));
+
+  return sheet;
+}
+
+function styleOrganizerHeaderRow(worksheet, headers) {
+  headers.forEach((_, index) => {
+    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: index });
+    if (!worksheet[cellAddress]) return;
+
+    worksheet[cellAddress].s = {
+      fill: {
+        patternType: "solid",
+        fgColor: { rgb: "FFD966" },
+      },
+      font: {
+        bold: true,
+        color: { rgb: "000000" },
+      },
+      alignment: {
+        horizontal: "center",
+        vertical: "center",
+      },
+    };
+  });
+}
+
+function buildOrganizedFileName(fileName) {
+  const cleanName = String(fileName || "OrganizedFile.xlsx");
+
+  if (cleanName.toLowerCase().endsWith(".xlsx")) {
+    return cleanName.replace(/\.xlsx$/i, "_ORGANIZED.xlsx");
+  }
+
+  return `${cleanName}_ORGANIZED.xlsx`;
 }
 
 function formatBytes(bytes) {
