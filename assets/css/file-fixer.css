@@ -200,12 +200,43 @@
     line-height: 1.5;
   }
 
-  .file-fixer-mode-card:hover,
-  .file-fixer-mode-card.active {
-    background: #FFECC2;
-    border-color: #D62828;
-    box-shadow: 0 10px 22px rgba(214, 40, 40, 0.12);
-  }
+.file-fixer-step-label {
+  margin-top: 26px;
+  margin-bottom: -12px;
+  font-weight: 700;
+  color: #A61B1B;
+}
+
+.file-fixer-mode-card {
+  position: relative;
+}
+
+.file-fixer-mode-card:hover {
+  border-color: #F2A6A6;
+  background: #FFF3D6;
+}
+
+.file-fixer-mode-card.active {
+  background: #FFECC2;
+  border-color: #D62828;
+  box-shadow: 0 10px 22px rgba(214, 40, 40, 0.12);
+}
+
+.file-fixer-mode-card.active::after {
+  content: "✓";
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #D62828;
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
   @media (max-width: 700px) {
     .file-fixer-mode-grid {

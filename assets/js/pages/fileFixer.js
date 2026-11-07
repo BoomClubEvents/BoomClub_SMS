@@ -15,7 +15,20 @@ const FIXED_HEADERS = [
   "Location",
   "E-mail",
   "Website",
+  "Other phone numbers",
 ];
+
+// Column positions inside a fixed row.
+const COL_NAME = 0;
+const COL_DESCRIPTION = 3;
+const COL_LOCATION = 8;
+const COL_EMAIL = 9;
+const COL_WEBSITE = 10;
+const COL_OTHER_PHONES = 11;
+const PHONE_SLOT_INDEXES = [1, 2, 4, 5, 6, 7];
+
+// Excel refuses cells longer than 32,767 characters.
+const EXCEL_MAX_CELL_LENGTH = 32000;
 
 const FILE_FIXER_MODE_SAME_SHEETS = "sameSheets";
 const FILE_FIXER_MODE_ONE_SHEET = "oneSheet";
@@ -40,151 +53,131 @@ let selectedFileFixerMainMode = "";
 let selectedOrganizeFilterFiles = [];
 
 export function initFileFixerPage() {
-  
   const fileInput = document.getElementById("fileFixerInput");
   const processBtn = document.getElementById("processFileFixerBtn");
   const clearFileFixerBtn = document.getElementById("clearFileFixerBtn");
   const fixMessedFileModeBtn = document.getElementById("fixMessedFileModeBtn");
-const organizeFilterModeBtn = document.getElementById("organizeFilterModeBtn");
-const organizeFilterInput = document.getElementById("organizeFilterInput");
-const processOrganizeFilterBtn = document.getElementById("processOrganizeFilterBtn");
-const clearOrganizeFilterBtn = document.getElementById("clearOrganizeFilterBtn");
-const fileFixerBackBtn = document.getElementById("fileFixerBackBtn");
-const organizeFilterBackBtn = document.getElementById("organizeFilterBackBtn");
-const fileFixerSeparateFilesOutputBtn = document.getElementById("fileFixerSeparateFilesOutputBtn");
-const fileFixerOneFileOutputBtn = document.getElementById("fileFixerOneFileOutputBtn");
-const organizerSeparateFilesModeBtn = document.getElementById("organizerSeparateFilesModeBtn");
-const organizerAllInOneModeBtn = document.getElementById("organizerAllInOneModeBtn");
+  const organizeFilterModeBtn = document.getElementById("organizeFilterModeBtn");
+  const organizeFilterInput = document.getElementById("organizeFilterInput");
+  const processOrganizeFilterBtn = document.getElementById("processOrganizeFilterBtn");
+  const clearOrganizeFilterBtn = document.getElementById("clearOrganizeFilterBtn");
+  const fileFixerBackBtn = document.getElementById("fileFixerBackBtn");
+  const organizeFilterBackBtn = document.getElementById("organizeFilterBackBtn");
+  const fileFixerSeparateFilesOutputBtn = document.getElementById("fileFixerSeparateFilesOutputBtn");
+  const fileFixerOneFileOutputBtn = document.getElementById("fileFixerOneFileOutputBtn");
+  const organizerSeparateFilesModeBtn = document.getElementById("organizerSeparateFilesModeBtn");
+  const organizerAllInOneModeBtn = document.getElementById("organizerAllInOneModeBtn");
+  const sameSheetsModeBtn = document.getElementById("sameSheetsModeBtn");
+  const oneSheetModeBtn = document.getElementById("oneSheetModeBtn");
 
+  function updateOrganizerModeButtons() {
+    organizerSeparateFilesModeBtn?.classList.toggle(
+      "active",
+      selectedOrganizerMode === ORGANIZER_MODE_SEPARATE
+    );
 
-function updateOrganizerModeButtons() {
-  organizerSeparateFilesModeBtn?.classList.toggle(
-    "active",
-    selectedOrganizerMode === ORGANIZER_MODE_SEPARATE
-  );
-
-  organizerAllInOneModeBtn?.classList.toggle(
-    "active",
-    selectedOrganizerMode === ORGANIZER_MODE_ALL_IN_ONE
-  );
-}
-
-
-  if (fileInput) {
-    fileInput.addEventListener("change", handleFileFixerFileSelection);
+    organizerAllInOneModeBtn?.classList.toggle(
+      "active",
+      selectedOrganizerMode === ORGANIZER_MODE_ALL_IN_ONE
+    );
   }
 
-  if (processBtn) {
-    processBtn.addEventListener("click", handleProcessFileFixerFiles);
+  function updateFileFixerModeButtons() {
+    sameSheetsModeBtn?.classList.toggle(
+      "active",
+      selectedFileFixerMode === FILE_FIXER_MODE_SAME_SHEETS
+    );
+
+    oneSheetModeBtn?.classList.toggle(
+      "active",
+      selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET
+    );
   }
 
-clearFileFixerBtn?.addEventListener("click", clearFileFixerFiles);
+  function updateFileFixerOutputButtons() {
+    fileFixerSeparateFilesOutputBtn?.classList.toggle(
+      "active",
+      selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_SEPARATE
+    );
+
+    fileFixerOneFileOutputBtn?.classList.toggle(
+      "active",
+      selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_ONE_FILE
+    );
+  }
+
+  fileInput?.addEventListener("change", handleFileFixerFileSelection);
+  processBtn?.addEventListener("click", handleProcessFileFixerFiles);
+  clearFileFixerBtn?.addEventListener("click", clearFileFixerFiles);
 
   fixMessedFileModeBtn?.addEventListener("click", () => {
-  selectedFileFixerMainMode = FILE_FIXER_MAIN_MODE_FIX;
-  updateMainFileFixerMode();
-});
+    selectedFileFixerMainMode = FILE_FIXER_MAIN_MODE_FIX;
+    updateMainFileFixerMode();
+  });
 
-organizeFilterModeBtn?.addEventListener("click", () => {
-  selectedFileFixerMainMode = FILE_FIXER_MAIN_MODE_ORGANIZE;
-  updateMainFileFixerMode();
-});
+  organizeFilterModeBtn?.addEventListener("click", () => {
+    selectedFileFixerMainMode = FILE_FIXER_MAIN_MODE_ORGANIZE;
+    updateMainFileFixerMode();
+  });
 
-organizeFilterInput?.addEventListener("change", handleOrganizeFilterFileSelection);
-processOrganizeFilterBtn?.addEventListener("click", handleProcessOrganizeFilterFile);
-clearOrganizeFilterBtn?.addEventListener("click", clearOrganizeFilterFiles);
-fileFixerBackBtn?.addEventListener("click", () => {
-  selectedFileFixerMainMode = "";
-  updateMainFileFixerMode();
-});
+  organizeFilterInput?.addEventListener("change", handleOrganizeFilterFileSelection);
+  processOrganizeFilterBtn?.addEventListener("click", handleProcessOrganizeFilterFile);
+  clearOrganizeFilterBtn?.addEventListener("click", clearOrganizeFilterFiles);
 
-organizeFilterBackBtn?.addEventListener("click", () => {
-  selectedFileFixerMainMode = "";
-  updateMainFileFixerMode();
-});
+  fileFixerBackBtn?.addEventListener("click", () => {
+    selectedFileFixerMainMode = "";
+    updateMainFileFixerMode();
+  });
 
+  organizeFilterBackBtn?.addEventListener("click", () => {
+    selectedFileFixerMainMode = "";
+    updateMainFileFixerMode();
+  });
 
-organizerSeparateFilesModeBtn?.addEventListener("click", () => {
-  selectedOrganizerMode = ORGANIZER_MODE_SEPARATE;
-  updateOrganizerModeButtons();
-});
+  organizerSeparateFilesModeBtn?.addEventListener("click", () => {
+    selectedOrganizerMode = ORGANIZER_MODE_SEPARATE;
+    updateOrganizerModeButtons();
+  });
 
-organizerAllInOneModeBtn?.addEventListener("click", () => {
-  selectedOrganizerMode = ORGANIZER_MODE_ALL_IN_ONE;
-  updateOrganizerModeButtons();
-});
+  organizerAllInOneModeBtn?.addEventListener("click", () => {
+    selectedOrganizerMode = ORGANIZER_MODE_ALL_IN_ONE;
+    updateOrganizerModeButtons();
+  });
 
-updateOrganizerModeButtons();
-renderOrganizerKeywords();
-
-const addOrganizerSheetBtn = document.getElementById("addOrganizerSheetBtn");
-addOrganizerSheetBtn?.addEventListener("click", addOrganizerSheetCategory);
-
-  const sameSheetsModeBtn = document.getElementById("sameSheetsModeBtn");
-const oneSheetModeBtn = document.getElementById("oneSheetModeBtn");
-
-if (sameSheetsModeBtn) {
-  sameSheetsModeBtn.addEventListener("click", () => {
+  sameSheetsModeBtn?.addEventListener("click", () => {
     selectedFileFixerMode = FILE_FIXER_MODE_SAME_SHEETS;
     updateFileFixerModeButtons();
     clearFileFixerReport();
     clearFileFixerError();
   });
-}
 
-if (oneSheetModeBtn) {
-  oneSheetModeBtn.addEventListener("click", () => {
+  oneSheetModeBtn?.addEventListener("click", () => {
     selectedFileFixerMode = FILE_FIXER_MODE_ONE_SHEET;
     updateFileFixerModeButtons();
     clearFileFixerReport();
     clearFileFixerError();
   });
-}
 
-updateFileFixerModeButtons();
+  fileFixerSeparateFilesOutputBtn?.addEventListener("click", () => {
+    selectedFileFixerOutputMode = FILE_FIXER_OUTPUT_SEPARATE;
+    updateFileFixerOutputButtons();
+    clearFileFixerReport();
+  });
 
-function updateFileFixerModeButtons() {
-  const sameSheetsModeBtn = document.getElementById("sameSheetsModeBtn");
-  const oneSheetModeBtn = document.getElementById("oneSheetModeBtn");
+  fileFixerOneFileOutputBtn?.addEventListener("click", () => {
+    selectedFileFixerOutputMode = FILE_FIXER_OUTPUT_ONE_FILE;
+    updateFileFixerOutputButtons();
+    clearFileFixerReport();
+  });
 
-  sameSheetsModeBtn?.classList.toggle(
-    "active",
-    selectedFileFixerMode === FILE_FIXER_MODE_SAME_SHEETS
-  );
+  const addOrganizerSheetBtn = document.getElementById("addOrganizerSheetBtn");
+  addOrganizerSheetBtn?.addEventListener("click", addOrganizerSheetCategory);
 
-  oneSheetModeBtn?.classList.toggle(
-    "active",
-    selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET
-  );
-}
-
-
-fileFixerSeparateFilesOutputBtn?.addEventListener("click", () => {
-  selectedFileFixerOutputMode = FILE_FIXER_OUTPUT_SEPARATE;
+  updateOrganizerModeButtons();
+  updateFileFixerModeButtons();
   updateFileFixerOutputButtons();
-});
-
-fileFixerOneFileOutputBtn?.addEventListener("click", () => {
-  selectedFileFixerOutputMode = FILE_FIXER_OUTPUT_ONE_FILE;
-  updateFileFixerOutputButtons();
-});
-
-updateFileFixerOutputButtons();
-
-function updateFileFixerOutputButtons() {
-  fileFixerSeparateFilesOutputBtn?.classList.toggle(
-    "active",
-    selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_SEPARATE
-  );
-
-  fileFixerOneFileOutputBtn?.classList.toggle(
-    "active",
-    selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_ONE_FILE
-  );
-}
-
-
-updateMainFileFixerMode();
+  renderOrganizerKeywords();
+  updateMainFileFixerMode();
   renderSelectedFileFixerFiles();
   clearFileFixerError();
   clearFileFixerReport();
@@ -223,6 +216,8 @@ function updateMainFileFixerMode() {
   clearFileFixerReport();
 }
 
+/* ---------- ORGANIZER: FILE SELECTION ---------- */
+
 function handleOrganizeFilterFileSelection(event) {
   const incomingFiles = Array.from(event.target.files || []);
 
@@ -260,66 +255,17 @@ function renderSelectedOrganizeFilterFiles() {
   listWrapper.className = "file-fixer-selected-files-list";
 
   selectedOrganizeFilterFiles.forEach((file, index) => {
-    const row = document.createElement("div");
-    row.className = "file-fixer-file-pill";
+    listWrapper.appendChild(
+      buildSelectedFilePill(file, index, () => {
+        selectedOrganizeFilterFiles = selectedOrganizeFilterFiles.filter(
+          (_, fileIndex) => fileIndex !== index
+        );
 
-    const leftSide = document.createElement("div");
-    leftSide.className = "file-fixer-file-pill-left";
-
-    const label = document.createElement("strong");
-    label.textContent = `Selected file ${index + 1}: `;
-
-    const fileName = document.createElement("span");
-    fileName.textContent = file.name;
-    fileName.className = "file-fixer-file-name";
-    fileName.title = "Click to preview this file";
-    fileName.addEventListener("click", async () => {
-      try {
-        await openFilePreview(file);
-      } catch (error) {
-        console.error("Preview failed:", error);
-      }
-    });
-
-    leftSide.appendChild(label);
-    leftSide.appendChild(fileName);
-
-    const rightSide = document.createElement("div");
-    rightSide.className = "file-fixer-file-pill-actions";
-
-    const previewBtn = document.createElement("button");
-    previewBtn.type = "button";
-    previewBtn.className = "file-fixer-small-action-btn";
-    previewBtn.textContent = "Preview";
-    previewBtn.addEventListener("click", async () => {
-      try {
-        await openFilePreview(file);
-      } catch (error) {
-        console.error("Preview failed:", error);
-      }
-    });
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "file-fixer-small-remove-btn";
-    removeBtn.textContent = "✕";
-    removeBtn.title = "Remove file";
-    removeBtn.addEventListener("click", () => {
-      selectedOrganizeFilterFiles = selectedOrganizeFilterFiles.filter(
-        (_, fileIndex) => fileIndex !== index
-      );
-
-      renderSelectedOrganizeFilterFiles();
-      clearOrganizeFilterError();
-      clearFileFixerReport();
-    });
-
-    rightSide.appendChild(previewBtn);
-    rightSide.appendChild(removeBtn);
-
-    row.appendChild(leftSide);
-    row.appendChild(rightSide);
-    listWrapper.appendChild(row);
+        renderSelectedOrganizeFilterFiles();
+        clearOrganizeFilterError();
+        clearFileFixerReport();
+      })
+    );
   });
 
   selectedFileEl.appendChild(listWrapper);
@@ -363,9 +309,7 @@ async function handleProcessOrganizeFilterFile() {
     const fileWorkbookPairs = [];
 
     for (const file of selectedOrganizeFilterFiles) {
-      const fileData = await readFileAsArrayBuffer(file);
-      const workbook = XLSX.read(fileData, { type: "array" });
-
+      const workbook = await readWorkbookFromFile(file);
       fileWorkbookPairs.push({ fileName: file.name, workbook });
     }
 
@@ -386,6 +330,8 @@ async function handleProcessOrganizeFilterFile() {
     );
   }
 }
+
+/* ---------- FIXER: FILE SELECTION ---------- */
 
 function handleFileFixerFileSelection(event) {
   const incomingFiles = Array.from(event.target.files || []);
@@ -448,63 +394,65 @@ function renderSelectedFileFixerFiles() {
   listWrapper.className = "file-fixer-selected-files-list";
 
   selectedFileFixerFiles.forEach((file, index) => {
-    const row = document.createElement("div");
-    row.className = "file-fixer-file-pill";
-
-    const leftSide = document.createElement("div");
-    leftSide.className = "file-fixer-file-pill-left";
-
-    const label = document.createElement("strong");
-    label.textContent = `Selected file ${index + 1}: `;
-
-    const fileName = document.createElement("span");
-    fileName.textContent = file.name;
-    fileName.className = "file-fixer-file-name";
-    fileName.title = "Click to preview this file";
-    fileName.addEventListener("click", async () => {
-      try {
-        await openFilePreview(file);
-      } catch (error) {
-        console.error("Preview failed:", error);
-      }
-    });
-
-    leftSide.appendChild(label);
-    leftSide.appendChild(fileName);
-
-    const rightSide = document.createElement("div");
-    rightSide.className = "file-fixer-file-pill-actions";
-
-    const previewBtn = document.createElement("button");
-    previewBtn.type = "button";
-    previewBtn.className = "file-fixer-small-action-btn";
-    previewBtn.textContent = "Preview";
-    previewBtn.addEventListener("click", async () => {
-      try {
-        await openFilePreview(file);
-      } catch (error) {
-        console.error("Preview failed:", error);
-      }
-    });
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "file-fixer-small-remove-btn";
-    removeBtn.textContent = "✕";
-    removeBtn.title = "Remove file";
-    removeBtn.addEventListener("click", () => {
-      removeSelectedFileFixerFile(index);
-    });
-
-    rightSide.appendChild(previewBtn);
-    rightSide.appendChild(removeBtn);
-
-    row.appendChild(leftSide);
-    row.appendChild(rightSide);
-    listWrapper.appendChild(row);
+    listWrapper.appendChild(
+      buildSelectedFilePill(file, index, () => removeSelectedFileFixerFile(index))
+    );
   });
 
   selectedFileEl.appendChild(listWrapper);
+}
+
+// One row in the "selected files" list: name (click to preview), Preview button, remove button.
+function buildSelectedFilePill(file, index, onRemove) {
+  const openPreview = async () => {
+    try {
+      await openFilePreview(file);
+    } catch (error) {
+      console.error("Preview failed:", error);
+    }
+  };
+
+  const row = document.createElement("div");
+  row.className = "file-fixer-file-pill";
+
+  const leftSide = document.createElement("div");
+  leftSide.className = "file-fixer-file-pill-left";
+
+  const label = document.createElement("strong");
+  label.textContent = `Selected file ${index + 1}: `;
+
+  const fileName = document.createElement("span");
+  fileName.textContent = file.name;
+  fileName.className = "file-fixer-file-name";
+  fileName.title = "Click to preview this file";
+  fileName.addEventListener("click", openPreview);
+
+  leftSide.appendChild(label);
+  leftSide.appendChild(fileName);
+
+  const rightSide = document.createElement("div");
+  rightSide.className = "file-fixer-file-pill-actions";
+
+  const previewBtn = document.createElement("button");
+  previewBtn.type = "button";
+  previewBtn.className = "file-fixer-small-action-btn";
+  previewBtn.textContent = "Preview";
+  previewBtn.addEventListener("click", openPreview);
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "file-fixer-small-remove-btn";
+  removeBtn.textContent = "✕";
+  removeBtn.title = "Remove file";
+  removeBtn.addEventListener("click", onRemove);
+
+  rightSide.appendChild(previewBtn);
+  rightSide.appendChild(removeBtn);
+
+  row.appendChild(leftSide);
+  row.appendChild(rightSide);
+
+  return row;
 }
 
 function removeSelectedFileFixerFile(indexToRemove) {
@@ -539,17 +487,19 @@ function clearFileFixerFiles() {
   renderSelectedFileFixerFiles();
 }
 
+/* ---------- FIXER: PROCESSING ---------- */
+
 async function handleProcessFileFixerFiles() {
   clearFileFixerError();
   clearFileFixerReport();
 
   if (selectedFileFixerFiles.length === 0) {
-    showFileFixerError("Please upload at least one .xlsx file first.");
+    showFileFixerError("Please upload at least one Excel or CSV file first.");
     return;
   }
 
   const invalidExtensionFiles = selectedFileFixerFiles.filter(
-(file) => !isSupportedSpreadsheetFile(file.name)
+    (file) => !isSupportedSpreadsheetFile(file.name)
   );
 
   if (invalidExtensionFiles.length > 0) {
@@ -557,153 +507,134 @@ async function handleProcessFileFixerFiles() {
       buildErrorListHtml(
         invalidExtensionFiles.map(
           (file) =>
-            `File "<strong>${escapeHtml(file.name)}</strong>" is invalid because only Excel or CSV files are allowed..`
+            `File "<strong>${escapeHtml(file.name)}</strong>" is invalid because only Excel or CSV files are allowed.`
         )
       )
     );
     return;
   }
 
-  try {
-    latestFileFixerResults = [];
+  const processBtn = document.getElementById("processFileFixerBtn");
+  const originalBtnText = processBtn?.textContent;
 
-    for (const file of selectedFileFixerFiles) {
-      const fileData = await readFileAsArrayBuffer(file);
-const workbook = XLSX.read(fileData, { type: "array" });
-const fixedResult =
-  selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET
-    ? fixWorkbookIntoOneSheet(file, workbook)
-    : fixWorkbook(file, workbook);
-latestFileFixerResults.push(fixedResult);
-
-if (selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_SEPARATE) {
-  downloadWorkbook(fixedResult.fixedWorkbook, fixedResult.fixedFileName);
-}
-    }
-
-
-    if (selectedFileFixerOutputMode === FILE_FIXER_OUTPUT_ONE_FILE) {
-  const combinedWorkbook = buildCombinedFixedWorkbook(latestFileFixerResults);
-  downloadWorkbook(combinedWorkbook, "ALL_FIXED_FILES.xlsx");
-}
-
-    renderFileFixerReport();
-} catch (error) {
-  console.error("File Fixer processing failed:", error);
-
-  showFileFixerError(
-    `Could not process the file.<br><br>
-    <strong>Real error:</strong> ${escapeHtml(error.message || error)}`
-  );
-}
-}
-
-function fixWorkbook(file, workbook) {
-  const fixedWorkbook = XLSX.utils.book_new();
-
-  let totalRows = 0;
-  let filledRows = 0;
-  let emptyRows = 0;
-  let movedPhones = 0;
-  let movedEmails = 0;
-  let movedWebsites = 0;
-  let duplicateRows = 0;
-
-  const seenRows = new Set();
-
-  workbook.SheetNames.forEach((sheetName) => {
-    const worksheet = workbook.Sheets[sheetName];
-    if (!worksheet) return;
-
-    const matrix = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      defval: "",
-      raw: true,
-      blankrows: true,
-    });
-
-    if (matrix.length === 0) {
-      const emptySheet = XLSX.utils.aoa_to_sheet([FIXED_HEADERS]);
-      XLSX.utils.book_append_sheet(fixedWorkbook, emptySheet, safeSheetName(sheetName));
-      return;
-    }
-
-const dataRows = matrix.slice(1);
-const fixedRows = [FIXED_HEADERS];
-
-const fixedRowResults = [];
-
-dataRows.forEach((row) => {
-  totalRows++;
-
-  if (isRowEmpty(row)) {
-    emptyRows++;
-    return;
+  if (processBtn) {
+    processBtn.disabled = true;
+    processBtn.textContent = "Processing...";
   }
 
-  filledRows++;
+  // Let the browser repaint the button before the heavy work starts.
+  await new Promise((resolve) => setTimeout(resolve, 30));
 
-  const fixedRowResult = fixSingleRow(row);
-  fixedRowResults.push(fixedRowResult);
+  try {
+    const collectedFiles = [];
 
-  movedPhones += fixedRowResult.movedPhones;
-  movedEmails += fixedRowResult.movedEmails;
-  movedWebsites += fixedRowResult.movedWebsites;
-});
+    for (const file of selectedFileFixerFiles) {
+      const workbook = await readWorkbookFromFile(file);
+      collectedFiles.push(collectFixedEntries(file, workbook));
+    }
 
-const mergedRows = removeDuplicatePhonesAcrossRows(
-  mergeDuplicateCompanyRows(fixedRowResults)
-);
+    latestFileFixerResults = buildFileFixerResults(
+      collectedFiles,
+      selectedFileFixerMode,
+      selectedFileFixerOutputMode
+    );
 
-duplicateRows += Math.max(fixedRowResults.length - mergedRows.length, 0);
+    latestFileFixerResults.forEach((result) => {
+      downloadWorkbook(result.fixedWorkbook, result.fixedFileName);
+    });
 
-mergedRows
-  .sort(sortFixedRows)
-  .forEach((fixedRow) => {
-    fixedRows.push(fixedRow);
+    renderFileFixerReport();
+  } catch (error) {
+    console.error("File Fixer processing failed:", error);
+
+    showFileFixerError(
+      `Could not process the file.<br><br>
+      <strong>Real error:</strong> ${escapeHtml(error.message || error)}`
+    );
+  } finally {
+    if (processBtn) {
+      processBtn.disabled = false;
+      processBtn.textContent = originalBtnText;
+    }
+  }
+}
+
+// Turns the collected rows into the final workbook(s), based on the two choices:
+//   sheet layout: same sheets / one sheet
+//   download:     separate files / one file
+function buildFileFixerResults(collectedFiles, layoutMode, outputMode) {
+  if (outputMode === FILE_FIXER_OUTPUT_SEPARATE) {
+    return collectedFiles.map((collected) => {
+      const built = buildFixedWorkbook(collected.entries, collected.sheetOrder, layoutMode);
+
+      return {
+        originalFileName: collected.file.name,
+        fixedFileName: buildFixedFileName(collected.file.name),
+        originalSizeBytes: collected.file.size,
+        fixedWorkbook: built.workbook,
+        finalRows: built.finalRows,
+        duplicateRows: built.mergedRows,
+        ...collected.stats,
+      };
+    });
+  }
+
+  // One file: everything is merged together, so the same company coming from
+  // two different files ends up in one row.
+  const allEntries = collectedFiles.flatMap((collected) => collected.entries);
+  const sheetOrder = [...new Set(collectedFiles.flatMap((collected) => collected.sheetOrder))];
+  const built = buildFixedWorkbook(allEntries, sheetOrder, layoutMode);
+
+  const totals = sumStats(collectedFiles.map((collected) => collected.stats));
+
+  return [
+    {
+      originalFileName: collectedFiles.map((collected) => collected.file.name).join(", "),
+      fixedFileName: "ALL_FIXED_FILES.xlsx",
+      originalSizeBytes: collectedFiles.reduce((sum, collected) => sum + collected.file.size, 0),
+      fixedWorkbook: built.workbook,
+      finalRows: built.finalRows,
+      duplicateRows: built.mergedRows,
+      ...totals,
+    },
+  ];
+}
+
+function sumStats(statsList) {
+  const totals = createEmptyStats();
+
+  statsList.forEach((stats) => {
+    Object.keys(totals).forEach((key) => {
+      totals[key] += stats[key] || 0;
+    });
   });
 
+  return totals;
+}
 
-const fixedSheet = XLSX.utils.aoa_to_sheet(fixedRows);
-styleFixedHeaderRow(fixedSheet);
-fixedSheet["!cols"] = buildFixedColumnWidths();
-
-    XLSX.utils.book_append_sheet(fixedWorkbook, fixedSheet, safeSheetName(sheetName));
-  });
-
-  const fixedFileName = buildFixedFileName(file.name);
-
+function createEmptyStats() {
   return {
-    originalFileName: file.name,
-    fixedFileName,
-    originalSizeBytes: file.size,
-    fixedWorkbook,
-    totalRows,
-    filledRows,
-    emptyRows,
-    duplicateRows,
-    movedPhones,
-    movedEmails,
-    movedWebsites,
+    totalRows: 0,
+    filledRows: 0,
+    emptyRows: 0,
+    movedPhones: 0,
+    movedEmails: 0,
+    movedWebsites: 0,
   };
 }
 
-
-function fixWorkbookIntoOneSheet(file, workbook) {
-  const fixedWorkbook = XLSX.utils.book_new();
-
-  let totalRows = 0;
-  let filledRows = 0;
-  let emptyRows = 0;
-  let movedPhones = 0;
-  let movedEmails = 0;
-  let movedWebsites = 0;
-
-  const fixedRows = [FIXED_HEADERS];
+// Reads every sheet of one workbook and fixes every row on its own.
+// Nothing is merged yet; merging happens in buildFixedWorkbook.
+function collectFixedEntries(file, workbook) {
+  const stats = createEmptyStats();
+  const entries = [];
+  const sheetOrder = [];
 
   workbook.SheetNames.forEach((sheetName) => {
     const worksheet = workbook.Sheets[sheetName];
     if (!worksheet) return;
+
+    sheetOrder.push(sheetName);
 
     const matrix = XLSX.utils.sheet_to_json(worksheet, {
       header: 1,
@@ -712,225 +643,183 @@ function fixWorkbookIntoOneSheet(file, workbook) {
       blankrows: true,
     });
 
-    const dataRows = matrix.slice(1);
+    getDataRows(matrix).forEach((rawRow) => {
+      stats.totalRows++;
 
-    dataRows.forEach((row) => {
-      totalRows++;
+      const row = prepareRawRow(rawRow);
 
       if (isRowEmpty(row)) {
-        emptyRows++;
+        stats.emptyRows++;
         return;
       }
 
-      filledRows++;
+      stats.filledRows++;
 
       const fixedRowResult = fixSingleRow(row);
 
-      movedPhones += fixedRowResult.movedPhones;
-      movedEmails += fixedRowResult.movedEmails;
-      movedWebsites += fixedRowResult.movedWebsites;
+      stats.movedPhones += fixedRowResult.movedPhones;
+      stats.movedEmails += fixedRowResult.movedEmails;
+      stats.movedWebsites += fixedRowResult.movedWebsites;
 
-      fixedRows.push(fixedRowResult.fixedRow);
+      entries.push({ sheetName, fixedRow: fixedRowResult.fixedRow });
     });
   });
 
-const uniqueRows = mergeRowsByPrimaryPhone(fixedRows.slice(1));
-const sortedRows = uniqueRows.sort(sortFixedRows);
-const finalRows = [FIXED_HEADERS, ...sortedRows];
-
-  const fixedSheet = XLSX.utils.aoa_to_sheet(finalRows);
-  styleFixedHeaderRow(fixedSheet);
-  fixedSheet["!cols"] = buildFixedColumnWidths();
-
-  XLSX.utils.book_append_sheet(fixedWorkbook, fixedSheet, "Fixed Companies");
-
-  return {
-    originalFileName: file.name,
-    fixedFileName: buildFixedFileName(file.name),
-    originalSizeBytes: file.size,
-    fixedWorkbook,
-    totalRows,
-    filledRows,
-    emptyRows,
-    duplicateRows: 0,
-    movedPhones,
-    movedEmails,
-    movedWebsites,
-  };
+  return { file, entries, sheetOrder, stats };
 }
-function mergeRowsByPrimaryPhone(rows) {
+
+// Groups the fixed rows into sheets, merges duplicates by company name, and builds the workbook.
+function buildFixedWorkbook(entries, sheetOrder, layoutMode) {
+  const workbook = XLSX.utils.book_new();
+  const rowsBySheet = new Map();
+
+  if (layoutMode === FILE_FIXER_MODE_ONE_SHEET) {
+    rowsBySheet.set("Fixed Companies", entries.map((entry) => [...entry.fixedRow]));
+  } else {
+    sheetOrder.forEach((sheetName) => rowsBySheet.set(sheetName, []));
+
+    entries.forEach((entry) => {
+      rowsBySheet.get(entry.sheetName).push([...entry.fixedRow]);
+    });
+  }
+
+  let mergedRows = 0;
+  let finalRows = 0;
+
+  rowsBySheet.forEach((rows, sheetName) => {
+    const uniqueRows = mergeRowsByCompanyName(rows);
+
+    mergedRows += rows.length - uniqueRows.length;
+    finalRows += uniqueRows.length;
+
+    const sheetRows = [FIXED_HEADERS, ...uniqueRows.sort(sortFixedRows).map(limitCellLengths)];
+
+    const fixedSheet = XLSX.utils.aoa_to_sheet(sheetRows);
+    styleFixedHeaderRow(fixedSheet);
+    fixedSheet["!cols"] = buildFixedColumnWidths();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      fixedSheet,
+      getUniqueWorkbookSheetName(workbook, sheetName)
+    );
+  });
+
+  return { workbook, mergedRows, finalRows };
+}
+
+/* ---------- MERGING ---------- */
+
+// Same company name (ignoring case, spaces, accents and punctuation) => one row.
+// Phones, descriptions, locations, emails and websites are combined without repeats.
+function mergeRowsByCompanyName(rows) {
   const groupedRows = new Map();
-  const uniqueRowsWithoutPhone = [];
+  const rowsWithoutName = [];
 
   rows.forEach((row) => {
-    const primaryPhoneKey = normalizePhoneForCompare(row[1]);
-
-    if (!primaryPhoneKey) {
-      uniqueRowsWithoutPhone.push(row);
-      return;
-    }
-
-    if (!groupedRows.has(primaryPhoneKey)) {
-      groupedRows.set(primaryPhoneKey, [...row]);
-      return;
-    }
-
-    const existingRow = groupedRows.get(primaryPhoneKey);
-
-    mergeUniqueCell(existingRow, row, 0);  // Name
-    mergeDescription(existingRow, row);    // Description
-    mergeUniqueCell(existingRow, row, 8);  // Location
-    mergeUniqueCell(existingRow, row, 9);  // Email
-    mergeUniqueCell(existingRow, row, 10); // Website
-
-    mergePhoneCells(existingRow, row);
-    existingRow[1] = row[1] || existingRow[1];
-
-    sanitizeFixedPhoneColumns(existingRow);
-  });
-
-  return [...groupedRows.values(), ...uniqueRowsWithoutPhone];
-}
-
-function removeDuplicatePhonesAcrossRows(rows) {
-  const seenPhones = new Set();
-  const phoneColumnIndexes = [1, 2, 4, 5, 6, 7];
-
-  return rows.map((row) => {
-    const cleanPhones = [];
-
-    phoneColumnIndexes.forEach((index) => {
-      const phones = extractPhonesFromText(row[index]);
-
-      phones.forEach((phone) => {
-        const phoneKey = normalizePhoneForCompare(phone);
-
-        if (!seenPhones.has(phoneKey)) {
-          seenPhones.add(phoneKey);
-          addUniquePhone(cleanPhones, phone);
-        }
-      });
-
-      row[index] = "";
-    });
-
-    row[1] = cleanPhones[0] || "";
-    row[2] = cleanPhones[1] || "";
-    row[4] = cleanPhones[2] || "";
-    row[5] = cleanPhones[3] || "";
-    row[6] = cleanPhones[4] || "";
-    row[7] = cleanPhones[5] || "";
-
-    return row;
-  });
-}
-
-function mergeDuplicateCompanyRows(fixedRowResults) {
-  const grouped = new Map();
-
-  fixedRowResults.forEach((result) => {
-    const row = result.fixedRow;
-    const key = buildCompanyMergeKey(row);
+    const key = buildCompanyNameKey(row[COL_NAME]);
 
     if (!key) {
-      grouped.set(`unique_${grouped.size}_${Date.now()}_${Math.random()}`, row);
+      rowsWithoutName.push(row);
       return;
     }
 
-    if (!grouped.has(key)) {
-      grouped.set(key, [...row]);
+    const existingRow = groupedRows.get(key);
+
+    if (!existingRow) {
+      groupedRows.set(key, row);
       return;
     }
 
-    const existingRow = grouped.get(key);
-
-mergePhoneCells(existingRow, row);
-    mergeDescription(existingRow, row);
-mergePhoneCells(existingRow, row);
-mergeDescription(existingRow, row);
-mergeUniqueCell(existingRow, row, 8);  // Location
-mergeUniqueCell(existingRow, row, 9);  // Email
-mergeUniqueCell(existingRow, row, 10); // Website
-sanitizeFixedPhoneColumns(existingRow);
+    mergePhoneCells(existingRow, row);
+    mergeListCell(existingRow, row, COL_DESCRIPTION);
+    mergeListCell(existingRow, row, COL_LOCATION);
+    mergeListCell(existingRow, row, COL_EMAIL);
+    mergeListCell(existingRow, row, COL_WEBSITE);
   });
 
-  return [...grouped.values()];
+  return [...groupedRows.values(), ...rowsWithoutName];
 }
 
-function buildCompanyMergeKey(row) {
-  const name = normalizeValue(row[0]).toLowerCase();
-const location = normalizeValue(row[8]).toLowerCase();
-  const email = normalizeValue(row[9]).toLowerCase();
-  const website = normalizeValue(row[10]).toLowerCase();
-
-  if (!name) return "";
-
-  return [name, location, email, website].filter(Boolean).join("__");
+function buildCompanyNameKey(name) {
+  return normalizeForKeywordSearch(name);
 }
 
-function mergeUniqueCell(existingRow, newRow, columnIndex) {
-  const existingValue = normalizeValue(existingRow[columnIndex]);
-  const newValue = normalizeValue(newRow[columnIndex]);
+// Adds the values of newRow[columnIndex] to existingRow[columnIndex], separated by " | ", skipping repeats.
+function mergeListCell(existingRow, newRow, columnIndex) {
+  const existingParts = splitListCell(existingRow[columnIndex]);
+  const seen = new Set(existingParts.map((part) => part.toLowerCase()));
 
-  if (!newValue) return;
+  splitListCell(newRow[columnIndex]).forEach((part) => {
+    const key = part.toLowerCase();
+    if (seen.has(key)) return;
 
-  if (!existingValue) {
-    existingRow[columnIndex] = newValue;
-    return;
-  }
+    seen.add(key);
+    existingParts.push(part);
+  });
 
-  const existingParts = existingValue
-    .split(" | ")
-    .map((item) => normalizeValue(item).toLowerCase());
-
-  if (!existingParts.includes(newValue.toLowerCase())) {
-    existingRow[columnIndex] = `${existingValue} | ${newValue}`;
-  }
+  existingRow[columnIndex] = existingParts.join(" | ");
 }
 
-function mergeDescription(existingRow, newRow) {
-const existingDescription = normalizeValue(existingRow[3]);
-const newDescription = normalizeValue(newRow[3]);
-
-  if (!newDescription) return;
-
-  if (!existingDescription) {
-existingRow[3] = newDescription;
-    return;
-  }
-
-  const existingParts = existingDescription
-    .split(" | ")
-    .map((item) => normalizeValue(item).toLowerCase());
-
-  const newParts = newDescription
+function splitListCell(value) {
+  return normalizeValue(value)
     .split(" | ")
     .map(normalizeValue)
     .filter(Boolean);
-
-  newParts.forEach((part) => {
-    if (!existingParts.includes(part.toLowerCase())) {
-existingRow[3] += ` | ${part}`;
-    }
-  });
 }
 
-function sortFixedRows(a, b) {
-  const completenessA = getRowCompletenessScore(a);
-  const completenessB = getRowCompletenessScore(b);
+function mergePhoneCells(existingRow, newRow) {
+  const phones = getRowPhones(existingRow);
 
-  if (completenessB !== completenessA) {
-    return completenessB - completenessA;
+  getRowPhones(newRow).forEach((phone) => addUniquePhone(phones, phone));
+
+  setRowPhones(existingRow, phones);
+}
+
+// All phones of a fixed row, in order: phone 1, phone 2, line 1-4, then "Other phone numbers".
+function getRowPhones(row) {
+  const phones = [];
+
+  [...PHONE_SLOT_INDEXES, COL_OTHER_PHONES].forEach((index) => {
+    extractPhonesFromText(row[index]).forEach((phone) => addUniquePhone(phones, phone));
+  });
+
+  return phones;
+}
+
+// First 6 phones go into the phone/line columns, the rest into "Other phone numbers".
+function setRowPhones(row, phones) {
+  PHONE_SLOT_INDEXES.forEach((index, position) => {
+    row[index] = phones[position] || "";
+  });
+
+  row[COL_OTHER_PHONES] = phones.slice(PHONE_SLOT_INDEXES.length).join(" | ");
+}
+
+// Rows with a phone come first, then A → Z by company name.
+function sortFixedRows(a, b) {
+  const aHasPhone = normalizeValue(a[1]) !== "";
+  const bHasPhone = normalizeValue(b[1]) !== "";
+
+  if (aHasPhone !== bHasPhone) {
+    return aHasPhone ? -1 : 1;
   }
 
-  return normalizeValue(a[0]).localeCompare(normalizeValue(b[0]), undefined, {
+  return normalizeValue(a[COL_NAME]).localeCompare(normalizeValue(b[COL_NAME]), undefined, {
     sensitivity: "base",
   });
 }
 
-function getRowCompletenessScore(row) {
-  return row.filter((value) => normalizeValue(value)).length;
+function limitCellLengths(row) {
+  return row.map((value) => {
+    const text = normalizeValue(value);
+    if (text.length <= EXCEL_MAX_CELL_LENGTH) return text;
+
+    return `${text.slice(0, EXCEL_MAX_CELL_LENGTH)} …(cut, too long for Excel)`;
+  });
 }
+
+/* ---------- FIXING ONE ROW ---------- */
 
 function fixSingleRow(row) {
   const values = Array.isArray(row) ? row.map(normalizeValue) : [];
@@ -942,22 +831,26 @@ function fixSingleRow(row) {
   const websites = [];
   const remainingText = [];
 
-values.forEach((value, index) => {
-      if (!value) return;
+  values.forEach((value) => {
+    if (!value) return;
 
-   const shouldExtractPhoneFromThisColumn = isLikelyPhoneColumn(index, value);
+    const extractedPhones = extractPhonesFromText(value);
 
-const extractedPhones = shouldExtractPhoneFromThisColumn
-  ? extractPhonesFromText(value)
-  : [];
+    extractedPhones.forEach((phone) => {
+      addUniquePhone(phones, phone);
+    });
 
-extractedPhones.forEach((phone) => {
-  addUniquePhone(phones, phone);
-});
+    let valueWithoutPhones = extractedPhones.length
+      ? removeExtractedPhonesFromText(value, extractedPhones)
+      : value;
 
-let valueWithoutPhones = shouldExtractPhoneFromThisColumn
-  ? removeExtractedPhonesFromText(value, extractedPhones)
-  : value;
+    // What is left after removing phones is often junk like "0 ; 0" or "+" or "/1/2/3".
+    if (extractedPhones.length && !/\p{L}/u.test(valueWithoutPhones)) {
+      return;
+    }
+
+    valueWithoutPhones = cleanCellValue(valueWithoutPhones);
+    if (!valueWithoutPhones) return;
 
     if (isEmail(valueWithoutPhones)) {
       addUnique(emails, valueWithoutPhones);
@@ -969,29 +862,20 @@ let valueWithoutPhones = shouldExtractPhoneFromThisColumn
       return;
     }
 
-    valueWithoutPhones = normalizeValue(valueWithoutPhones);
-
-    if (valueWithoutPhones) {
-      remainingText.push(valueWithoutPhones);
-    }
+    remainingText.push(valueWithoutPhones);
   });
 
-  fixedRow[0] = pickName(values, remainingText);
-  fixedRow[8] = pickLocation(remainingText, values);
+  fixedRow[COL_NAME] = pickName(values);
+  fixedRow[COL_LOCATION] = pickLocation(remainingText, values);
+  fixedRow[COL_DESCRIPTION] = buildDescription(
+    remainingText,
+    fixedRow[COL_NAME],
+    fixedRow[COL_LOCATION]
+  );
+  fixedRow[COL_EMAIL] = emails.join(" | ");
+  fixedRow[COL_WEBSITE] = websites.join(" | ");
 
-  fixedRow[1] = phones[0] || "";
-  fixedRow[2] = phones[1] || "";
-  fixedRow[3] = buildDescription(remainingText, fixedRow[0], fixedRow[8]);
-
-  fixedRow[4] = phones[2] || "";
-  fixedRow[5] = phones[3] || "";
-  fixedRow[6] = phones[4] || "";
-  fixedRow[7] = phones[5] || "";
-
-  fixedRow[9] = emails[0] || "";
-  fixedRow[10] = websites[0] || "";
-
-  sanitizeFixedPhoneColumns(fixedRow);
+  setRowPhones(fixedRow, phones);
 
   return {
     fixedRow,
@@ -1001,15 +885,7 @@ let valueWithoutPhones = shouldExtractPhoneFromThisColumn
   };
 }
 
-
-function isLikelyPhoneColumn(index, value) {
-  const text = normalizeValue(value);
-  if (!text) return false;
-
-  return extractPhonesFromText(text).length > 0;
-}
-
-function pickName(values, remainingText) {
+function pickName(values) {
   const cleanValues = values
     .map(normalizeValue)
     .filter(Boolean)
@@ -1017,7 +893,6 @@ function pickName(values, remainingText) {
 
   return cleanValues[0] || "";
 }
-
 
 function isBadNameCandidate(value) {
   const text = normalizeValue(value);
@@ -1046,12 +921,36 @@ function isBadNameCandidate(value) {
   return badWords.includes(lowerText);
 }
 
+const LOCATION_WORDS = [
+  "lebanon",
+  "beirut",
+  "dbayeh",
+  "jounieh",
+  "tripoli",
+  "saida",
+  "zahle",
+  "maten",
+  "metn",
+  "highway",
+  "building",
+  "floor",
+  "street",
+  "road",
+  "p.o.box",
+  "po box",
+  "بيروت",
+  "لبنان",
+  "جبل",
+  "شارع",
+];
 
 function pickLocation(remainingText, originalValues) {
   const originalLocation = normalizeValue(originalValues[7]);
 
+  // Column H is only trusted if it contains real words (not "25-258" or a phone).
   if (
     originalLocation &&
+    /\p{L}/u.test(originalLocation) &&
     !isPhoneLike(originalLocation) &&
     !isEmail(originalLocation) &&
     !isWebsite(originalLocation)
@@ -1063,51 +962,125 @@ function pickLocation(remainingText, originalValues) {
     if (isPhoneLike(value) || isEmail(value) || isWebsite(value)) return false;
 
     const text = value.toLowerCase();
-
-    return (
-      text.includes("lebanon") ||
-      text.includes("beirut") ||
-      text.includes("dbayeh") ||
-      text.includes("jounieh") ||
-      text.includes("tripoli") ||
-      text.includes("saida") ||
-      text.includes("zahle") ||
-      text.includes("maten") ||
-      text.includes("metn") ||
-      text.includes("highway") ||
-      text.includes("building") ||
-      text.includes("floor") ||
-      text.includes("street") ||
-      text.includes("road") ||
-      text.includes("p.o.box") ||
-      text.includes("po box") ||
-      text.includes("بيروت") ||
-      text.includes("لبنان") ||
-      text.includes("جبل") ||
-      text.includes("شارع")
-    );
+    return LOCATION_WORDS.some((word) => text.includes(word));
   });
 
   return locationCandidate || "";
 }
 
 function buildDescription(remainingText, name, location) {
-  return remainingText
+  const parts = [];
+
+  remainingText
     .filter((value) => value !== name && value !== location)
     .filter((value) => !isPhoneLike(value))
-    .join(" | ");
+    .forEach((value) => {
+      splitListCell(value).forEach((part) => addUnique(parts, part));
+    });
+
+  return parts.join(" | ");
 }
 
-function buildDuplicateKey(fixedRow) {
-  const name = normalizeValue(fixedRow[0]).toLowerCase();
-  const phone1 = normalizePhoneForCompare(fixedRow[1]);
-  const phone2 = normalizePhoneForCompare(fixedRow[2]);
-  const email = normalizeValue(fixedRow[9]).toLowerCase();
+/* ---------- RAW ROW CLEANUP ---------- */
 
-  const key = [name, phone1, phone2, email].filter(Boolean).join("__");
+// Reads Excel normally; reads CSV as UTF-8 text so Arabic and leading zeros survive.
+async function readWorkbookFromFile(file) {
+  if (/\.csv$/i.test(file.name)) {
+    const text = (await file.text()).replace(/^﻿/, "");
+    return XLSX.read(text, { type: "string", raw: true });
+  }
 
-  return key;
+  const data = await readFileAsArrayBuffer(file);
+  return XLSX.read(data, { type: "array" });
 }
+
+// Only skip the first row if it really looks like a header (no phone/email/website).
+function getDataRows(matrix) {
+  if (!matrix.length) return [];
+
+  const firstRow = prepareRawRow(matrix[0]).filter(Boolean);
+  const looksLikeData = firstRow.some(
+    (value) => isEmail(value) || isWebsite(value) || extractPhonesFromText(value).length > 0
+  );
+
+  return looksLikeData ? matrix : matrix.slice(1);
+}
+
+// Fixes rows like ",,,,,,,,jan63s,,,,,,,,," where a whole line is stuck in one cell.
+function prepareRawRow(row) {
+  if (!Array.isArray(row)) return [];
+
+  const cells = row.map(normalizeValue);
+  const filledCells = cells.filter(Boolean);
+
+  // Whole CSV line inside one cell -> split it back into real columns.
+  if (filledCells.length === 1 && looksLikeJoinedLine(filledCells[0], true)) {
+    return splitDelimitedLine(filledCells[0]);
+  }
+
+  // A normal row with one junk cell -> keep only the real values from that cell.
+  return cells.map((cell) =>
+    looksLikeJoinedLine(cell, false)
+      ? splitDelimitedLine(cell).filter(Boolean).join(" | ")
+      : cleanCellValue(cell)
+  );
+}
+
+function looksLikeJoinedLine(text, isOnlyCell) {
+  if (!text) return false;
+  if (text.includes("\t") || /[,;]\s*[,;]/.test(text)) return true; // ",," or ";;"
+  // A single cell with many commas is probably a full line (but "Hamra, Beirut" is not).
+  return isOnlyCell && (text.match(/[,;]/g) || []).length >= 4;
+}
+
+function detectDelimiter(text) {
+  const counts = { ",": 0, ";": 0, "\t": 0 };
+  for (const ch of text) if (ch in counts) counts[ch]++;
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+// CSV-aware split: keeps "Hamra, Beirut" together when it is inside quotes.
+function splitDelimitedLine(text) {
+  const delimiter = detectDelimiter(text);
+  const parts = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (ch === '"') {
+      if (inQuotes && text[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (ch === delimiter && !inQuotes) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+
+    current += ch;
+  }
+
+  parts.push(current);
+  return parts.map(cleanCellValue);
+}
+
+// Removes cells that are only punctuation, and trims stray commas/semicolons at the edges.
+function cleanCellValue(value) {
+  const text = normalizeValue(value);
+  if (!text) return "";
+  if (/^[\s,;|.\-_"'+/]+$/.test(text)) return "";
+  return text.replace(/^[\s,;|]+|[\s,;|]+$/g, "").trim();
+}
+
+/* ---------- REPORT ---------- */
 
 function renderFileFixerReport() {
   const container = document.getElementById("fileFixerReportContainer");
@@ -1123,7 +1096,8 @@ function renderFileFixerReport() {
           <p><strong>Total rows:</strong> ${result.totalRows}</p>
           <p><strong>Filled rows:</strong> ${result.filledRows}</p>
           <p><strong>Empty rows:</strong> ${result.emptyRows}</p>
-          <p><strong>Possible duplicate rows:</strong> ${result.duplicateRows}</p>
+          <p><strong>Duplicate rows merged:</strong> ${result.duplicateRows}</p>
+          <p><strong>Final companies:</strong> ${result.finalRows}</p>
           <p><strong>Detected phone values:</strong> ${result.movedPhones}</p>
           <p><strong>Detected emails:</strong> ${result.movedEmails}</p>
           <p><strong>Detected websites:</strong> ${result.movedWebsites}</p>
@@ -1145,11 +1119,12 @@ function renderFileFixerReport() {
     <div class="file-fixer-summary-box">
       <h2>File Fixer Report</h2>
       <p>
-        The system processed <strong>${latestFileFixerResults.length}</strong>
-        ${latestFileFixerResults.length === 1 ? "file" : "files"}.
+        The system processed <strong>${selectedFileFixerFiles.length}</strong>
+        ${selectedFileFixerFiles.length === 1 ? "file" : "files"}.
       </p>
       <p>
-        Each row was fixed independently. No row data was mixed with another row.
+        Rows with the same company name were merged into one row: all their phone numbers
+        were kept, and their descriptions were combined with " | ".
       </p>
     </div>
 
@@ -1158,7 +1133,7 @@ function renderFileFixerReport() {
     </div>
   `;
 
-  document.querySelectorAll("[data-download-fixed-index]").forEach((button) => {
+  container.querySelectorAll("[data-download-fixed-index]").forEach((button) => {
     button.addEventListener("click", () => {
       const index = Number(button.dataset.downloadFixedIndex);
       const result = latestFileFixerResults[index];
@@ -1211,8 +1186,7 @@ function showFileFixerError(message) {
 }
 
 async function convertLiveFileToStoredPreviewFile(file) {
-  const data = await readFileAsArrayBuffer(file);
-  const workbook = XLSX.read(data, { type: "array" });
+  const workbook = await readWorkbookFromFile(file);
 
   return {
     name: file.name,
@@ -1228,21 +1202,25 @@ async function convertLiveFileToStoredPreviewFile(file) {
   };
 }
 
+/* ---------- WORKBOOK HELPERS ---------- */
+
 function buildFixedColumnWidths() {
   return [
-    { wch: 32 },
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 18 },
-    { wch: 28 },
-    { wch: 55 },
-    { wch: 32 },
-    { wch: 32 },
+    { wch: 32 }, // Name
+    { wch: 18 }, // Phone 1
+    { wch: 18 }, // Phone 2
+    { wch: 50 }, // Description
+    { wch: 18 }, // Line 1
+    { wch: 18 }, // Line 2
+    { wch: 18 }, // Line 3
+    { wch: 18 }, // Line 4
+    { wch: 40 }, // Location
+    { wch: 32 }, // E-mail
+    { wch: 32 }, // Website
+    { wch: 30 }, // Other phone numbers
   ];
 }
+
 function styleFixedHeaderRow(worksheet) {
   FIXED_HEADERS.forEach((_, index) => {
     const cellAddress = XLSX.utils.encode_cell({ r: 0, c: index });
@@ -1273,14 +1251,16 @@ function styleFixedHeaderRow(worksheet) {
 }
 
 function safeSheetName(sheetName) {
-  return String(sheetName || "Sheet1").slice(0, 31);
+  return String(sheetName || "Sheet1")
+    .replace(/[\\/?*[\]:]/g, "")
+    .slice(0, 31) || "Sheet";
 }
 
 function buildFixedFileName(fileName) {
   const cleanName = String(fileName || "FixedFile.xlsx");
 
-  if (cleanName.toLowerCase().endsWith(".xlsx")) {
-    return cleanName.replace(/\.xlsx$/i, "_FIXED.xlsx");
+  if (/\.(xlsx|xls|xlsm|csv)$/i.test(cleanName)) {
+    return cleanName.replace(/\.(xlsx|xls|xlsm|csv)$/i, "_FIXED.xlsx");
   }
 
   return `${cleanName}_FIXED.xlsx`;
@@ -1290,66 +1270,8 @@ function isSupportedSpreadsheetFile(fileName) {
   return /\.(xlsx|xls|xlsm|csv)$/i.test(String(fileName || ""));
 }
 
-
-
 function downloadWorkbook(workbook, fileName) {
   XLSX.writeFile(workbook, fileName);
-}
-
-function buildCombinedFixedWorkbook(results) {
-  if (selectedFileFixerMode === FILE_FIXER_MODE_ONE_SHEET) {
-    return buildCombinedOneSheetFixedWorkbook(results);
-  }
-
-  return buildCombinedSameSheetsFixedWorkbook(results);
-}
-
-function buildCombinedSameSheetsFixedWorkbook(results) {
-  const combinedWorkbook = XLSX.utils.book_new();
-
-  results.forEach((result) => {
-    result.fixedWorkbook.SheetNames.forEach((sheetName) => {
-      const worksheet = result.fixedWorkbook.Sheets[sheetName];
-      if (!worksheet) return;
-
-      const finalSheetName = getUniqueWorkbookSheetName(combinedWorkbook, sheetName);
-      XLSX.utils.book_append_sheet(combinedWorkbook, worksheet, finalSheetName);
-    });
-  });
-
-  return combinedWorkbook;
-}
-
-function buildCombinedOneSheetFixedWorkbook(results) {
-  const allRows = [FIXED_HEADERS];
-
-  results.forEach((result) => {
-    const firstSheetName = result.fixedWorkbook.SheetNames[0];
-    const worksheet = result.fixedWorkbook.Sheets[firstSheetName];
-
-    if (!worksheet) return;
-
-    const rows = XLSX.utils.sheet_to_json(worksheet, {
-      header: 1,
-      defval: "",
-      raw: true,
-    });
-
-    allRows.push(...rows.slice(1));
-  });
-
-  const cleanedRows = mergeRowsByPrimaryPhone(allRows.slice(1)).sort(sortFixedRows);
-  const finalRows = [FIXED_HEADERS, ...cleanedRows];
-
-  const combinedWorkbook = XLSX.utils.book_new();
-  const fixedSheet = XLSX.utils.aoa_to_sheet(finalRows);
-
-  styleFixedHeaderRow(fixedSheet);
-  fixedSheet["!cols"] = buildFixedColumnWidths();
-
-  XLSX.utils.book_append_sheet(combinedWorkbook, fixedSheet, "All Fixed Rows");
-
-  return combinedWorkbook;
 }
 
 function getUniqueWorkbookSheetName(workbook, sheetName) {
@@ -1358,7 +1280,7 @@ function getUniqueWorkbookSheetName(workbook, sheetName) {
   let counter = 2;
 
   while (workbook.SheetNames.includes(finalName)) {
-    finalName = safeSheetName(`${baseName}_${counter}`);
+    finalName = `${baseName.slice(0, 27)}_${counter}`;
     counter++;
   }
 
@@ -1373,6 +1295,8 @@ function buildErrorListHtml(messages) {
     </ul>
   `;
 }
+
+/* ---------- VALUE HELPERS ---------- */
 
 function isRowEmpty(row) {
   return !Array.isArray(row) || row.every((value) => !normalizeValue(value));
@@ -1400,34 +1324,6 @@ function isWebsite(value) {
 
 function isPhoneLike(value) {
   return extractPhonesFromText(value).length > 0;
-}
-function sanitizeFixedPhoneColumns(fixedRow) {
-  const phoneColumnIndexes = [1, 2, 4, 5, 6, 7];
-  const cleanPhones = [];
-
-  phoneColumnIndexes.forEach((index) => {
-    const value = normalizeValue(fixedRow[index]);
-    const phones = extractPhonesFromText(value);
-
-    phones.forEach((phone) => {
-      addUniquePhone(cleanPhones, phone);
-    });
-
-    fixedRow[index] = "";
-  });
-
-  fixedRow[1] = cleanPhones[0] || "";
-  fixedRow[2] = cleanPhones[1] || "";
-  fixedRow[4] = cleanPhones[2] || "";
-  fixedRow[5] = cleanPhones[3] || "";
-  fixedRow[6] = cleanPhones[4] || "";
-  fixedRow[7] = cleanPhones[5] || "";
-}
-
-
-function cleanPhone(value) {
-  const phones = extractPhonesFromText(value);
-  return phones[0] || "";
 }
 
 function normalizePhoneForCompare(value) {
@@ -1462,67 +1358,44 @@ function addUniquePhone(list, value) {
   }
 }
 
-function mergePhoneCells(existingRow, newRow) {
-  const phoneColumnIndexes = [1, 2, 4, 5, 6, 7];
-  const phones = [];
+/* ---------- PHONE DETECTION ---------- */
 
-  phoneColumnIndexes.forEach((index) => {
-    extractPhonesFromText(existingRow[index]).forEach((phone) => {
-      addUniquePhone(phones, phone);
-    });
+// "P.O.Box 11-0391" or "B.P. 175523" are not phone numbers.
+const PO_BOX_PATTERN = /\b(?:p\.?\s*o\.?\s*box|b\.\s*p\.?)\s*[:.]?\s*\d[\d\s\-/]*/gi;
 
-    extractPhonesFromText(newRow[index]).forEach((phone) => {
-      addUniquePhone(phones, phone);
-    });
+// Lebanese phone: optional +961 / 00961, then 1-2 digit area/mobile code, then 3 + 3-4 digits.
+// No trailing extension group: it used to swallow the start of the NEXT number
+// ("961 1 325 736    1325 739" became one invalid 14-digit number and was lost).
+const PHONE_PATTERN =
+  /(?:\+?\s*961|00\s*961)?[\s.\-/()]*\d{1,2}[\s.\-/()]*\d{3}[\s.\-/()]*\d{3,4}/g;
 
-    existingRow[index] = "";
-  });
-
-  existingRow[1] = phones[0] || "";
-  existingRow[2] = phones[1] || "";
-  existingRow[4] = phones[2] || "";
-  existingRow[5] = phones[3] || "";
-  existingRow[6] = phones[4] || "";
-  existingRow[7] = phones[5] || "";
-}
+const COMPACT_MOBILE_PATTERN = /\b(?:3|70|71|76|78|79|81)\d{6}\b/g;
 
 function extractPhonesFromText(value) {
-  const text = normalizeValue(value);
+  let text = normalizeValue(value);
   if (!text) return [];
 
   if (isEmail(text) || isWebsite(text)) return [];
 
+  text = text.replace(PO_BOX_PATTERN, " ");
+
   const results = [];
 
-  const phonePattern =
-    /(?:\+?\s*961|00961)?[\s.\-/()]*\d{1,2}[\s.\-/()]*\d{3}[\s.\-/()]*\d{3,4}(?:[\s.\-/]*\d{1,4})?/g;
-
-  const directMatches = text.match(phonePattern) || [];
-
-  directMatches.forEach((match) => {
+  (text.match(PHONE_PATTERN) || []).forEach((match) => {
     const normalized = normalizeLebanesePhone(match);
-
-    if (normalized) {
-      addUniquePhone(results, normalized);
-    }
+    if (normalized) addUniquePhone(results, normalized);
   });
 
-  const compactMobilePattern = /\b(?:3|70|71|76|78|79|81)\d{6}\b/g;
-  const compactMobileMatches = text.match(compactMobilePattern) || [];
-
-  compactMobileMatches.forEach((match) => {
+  (text.match(COMPACT_MOBILE_PATTERN) || []).forEach((match) => {
     const normalized = normalizeLebanesePhone(match);
-
-    if (normalized) {
-      addUniquePhone(results, normalized);
-    }
+    if (normalized) addUniquePhone(results, normalized);
   });
 
   return results;
 }
 
-function normalizeLebanesePhone(value, fullText = "") {
-  let text = normalizeValue(value);
+function normalizeLebanesePhone(value) {
+  const text = normalizeValue(value);
   if (!text) return "";
 
   let digits = text.replace(/\D/g, "");
@@ -1555,15 +1428,10 @@ function normalizeLebanesePhone(value, fullText = "") {
   return "";
 }
 
-
 function isValidLebaneseLocalNumber(localPart) {
   if (!/^\d+$/.test(localPart)) return false;
 
-  if (localPart.length === 6) {
-    return /^[1-9]/.test(localPart);
-  }
-
-  if (localPart.length === 7) {
+  if (localPart.length === 6 || localPart.length === 7) {
     return /^[1-9]/.test(localPart);
   }
 
@@ -1587,25 +1455,22 @@ function removeExtractedPhonesFromText(value, phones) {
 
     const localDigits = digits.startsWith("961") ? digits.slice(3) : digits;
 
-    const possibleForms = [
-      digits,
-      `00${digits}`,
-      localDigits,
-      `0${localDigits}`,
-    ];
+    // Longest forms first, so "01/325736" is removed as a whole instead of leaving a lonely "0".
+    const possibleForms = [`00${digits}`, digits, `0${localDigits}`, localDigits];
 
     possibleForms.forEach((form) => {
       const loosePattern = form.split("").join("[\\s.\\-/()]*");
-      text = text.replace(new RegExp(loosePattern, "g"), " ");
+      text = text.replace(new RegExp(`\\+?\\s*${loosePattern}`, "g"), " ");
     });
   });
 
   return text.replace(/\s+/g, " ").trim();
 }
 
+/* ---------- ORGANIZER ---------- */
 
 const DEFAULT_ORGANIZER_CATEGORIES = [
-    { sheetName: "Fournisseur", keywords: ["fournisseur", "supplier"] },
+  { sheetName: "Fournisseur", keywords: ["fournisseur", "supplier"] },
   { sheetName: "Client", keywords: ["client", "old client", "old clients"] },
   { sheetName: "Ucmas", keywords: ["ucmas"] },
   { sheetName: "Acmas", keywords: ["acmas"] },
@@ -1665,7 +1530,7 @@ const DEFAULT_ORGANIZER_CATEGORIES = [
   { sheetName: "August", keywords: ["august", "aout", "août"] },
 ];
 
-let organizerCategories = loadOrganizerCategories();  
+let organizerCategories = loadOrganizerCategories();
 
 function organizeWorkbookByKeywords(workbook, sourceFileName = "") {
   return organizeMultipleWorkbooksByKeywords([{ fileName: sourceFileName, workbook }]);
@@ -1757,7 +1622,7 @@ function organizeMultipleWorkbooksByKeywords(fileWorkbookPairs) {
     XLSX.utils.book_append_sheet(
       organizedWorkbook,
       sheet,
-      safeSheetName(sheetName)
+      getUniqueWorkbookSheetName(organizedWorkbook, sheetName)
     );
   });
 
@@ -1784,29 +1649,11 @@ function findMatchingOrganizerCategories(row, sourceSheetName = "") {
   return [...new Set(matches)];
 }
 
-
-function containsExactPhrase(rowWords, keywordWords) {
-  if (keywordWords.length === 0) return false;
-
-  for (let i = 0; i <= rowWords.length - keywordWords.length; i++) {
-    const isMatch = keywordWords.every(
-      (keywordWord, index) => rowWords[i + index] === keywordWord
-    );
-
-    if (isMatch) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-
 function normalizeForKeywordSearch(value) {
   return normalizeValue(value)
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[̀-ͯ]/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -1823,7 +1670,7 @@ function collectOrganizerHeaders(rows) {
     });
   });
 
-const preferredHeaders = ["Phone Numbers", "Source File", "Source Sheet"];
+  const preferredHeaders = ["Phone Numbers", "Source File", "Source Sheet"];
 
   return [
     ...preferredHeaders.filter((header) => headers.includes(header)),
@@ -1879,12 +1726,14 @@ function styleOrganizerHeaderRow(worksheet, headers) {
 function buildOrganizedFileName(fileName) {
   const cleanName = String(fileName || "OrganizedFile.xlsx");
 
-  if (cleanName.toLowerCase().endsWith(".xlsx")) {
-    return cleanName.replace(/\.xlsx$/i, "_ORGANIZED.xlsx");
+  if (/\.(xlsx|xls|xlsm|csv)$/i.test(cleanName)) {
+    return cleanName.replace(/\.(xlsx|xls|xlsm|csv)$/i, "_ORGANIZED.xlsx");
   }
 
   return `${cleanName}_ORGANIZED.xlsx`;
 }
+
+/* ---------- GENERAL HELPERS ---------- */
 
 function formatBytes(bytes) {
   if (!bytes && bytes !== 0) return "Unknown";
@@ -1925,6 +1774,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+/* ---------- ORGANIZER KEYWORDS (saved in the browser) ---------- */
 
 function loadOrganizerCategories() {
   try {
@@ -1948,10 +1798,14 @@ function loadOrganizerCategories() {
 }
 
 function saveOrganizerCategories() {
-  localStorage.setItem(
-    ORGANIZER_KEYWORDS_STORAGE_KEY,
-    JSON.stringify(organizerCategories)
-  );
+  try {
+    localStorage.setItem(
+      ORGANIZER_KEYWORDS_STORAGE_KEY,
+      JSON.stringify(organizerCategories)
+    );
+  } catch (error) {
+    console.error("Could not save organizer keywords:", error);
+  }
 }
 
 function renderOrganizerKeywords() {
@@ -1964,60 +1818,60 @@ function renderOrganizerKeywords() {
     const card = document.createElement("div");
     card.className = "file-fixer-keyword-category-card";
 
-const titleRow = document.createElement("div");
-titleRow.className = "file-fixer-keyword-title-row";
+    const titleRow = document.createElement("div");
+    titleRow.className = "file-fixer-keyword-title-row";
 
-const title = document.createElement("h3");
-title.textContent = category.sheetName;
+    const title = document.createElement("h3");
+    title.textContent = category.sheetName;
 
-const titleActions = document.createElement("div");
-titleActions.className = "file-fixer-keyword-title-actions";
+    const titleActions = document.createElement("div");
+    titleActions.className = "file-fixer-keyword-title-actions";
 
-const editSheetBtn = document.createElement("button");
-editSheetBtn.type = "button";
-editSheetBtn.textContent = "Edit Title";
-editSheetBtn.addEventListener("click", () => {
-  const newSheetName = prompt("Edit sheet title:", category.sheetName);
-  const cleanSheetName = normalizeValue(newSheetName);
+    const editSheetBtn = document.createElement("button");
+    editSheetBtn.type = "button";
+    editSheetBtn.textContent = "Edit Title";
+    editSheetBtn.addEventListener("click", () => {
+      const newSheetName = prompt("Edit sheet title:", category.sheetName);
+      const cleanSheetName = normalizeValue(newSheetName);
 
-  if (!cleanSheetName) return;
+      if (!cleanSheetName) return;
 
-  const alreadyExists = organizerCategories.some(
-    (item, index) =>
-      index !== categoryIndex &&
-      item.sheetName.toLowerCase() === cleanSheetName.toLowerCase()
-  );
+      const alreadyExists = organizerCategories.some(
+        (item, index) =>
+          index !== categoryIndex &&
+          item.sheetName.toLowerCase() === cleanSheetName.toLowerCase()
+      );
 
-  if (alreadyExists) {
-    alert("This sheet title already exists.");
-    return;
-  }
+      if (alreadyExists) {
+        alert("This sheet title already exists.");
+        return;
+      }
 
-  category.sheetName = cleanSheetName;
-  saveOrganizerCategories();
-  renderOrganizerKeywords();
-});
+      category.sheetName = cleanSheetName;
+      saveOrganizerCategories();
+      renderOrganizerKeywords();
+    });
 
-const deleteSheetBtn = document.createElement("button");
-deleteSheetBtn.type = "button";
-deleteSheetBtn.textContent = "Delete Sheet";
-deleteSheetBtn.addEventListener("click", () => {
-  const confirmed = confirm(
-    `Delete the sheet "${category.sheetName}" and all its keywords?`
-  );
+    const deleteSheetBtn = document.createElement("button");
+    deleteSheetBtn.type = "button";
+    deleteSheetBtn.textContent = "Delete Sheet";
+    deleteSheetBtn.addEventListener("click", () => {
+      const confirmed = confirm(
+        `Delete the sheet "${category.sheetName}" and all its keywords?`
+      );
 
-  if (!confirmed) return;
+      if (!confirmed) return;
 
-  organizerCategories.splice(categoryIndex, 1);
-  saveOrganizerCategories();
-  renderOrganizerKeywords();
-});
+      organizerCategories.splice(categoryIndex, 1);
+      saveOrganizerCategories();
+      renderOrganizerKeywords();
+    });
 
-titleActions.appendChild(editSheetBtn);
-titleActions.appendChild(deleteSheetBtn);
+    titleActions.appendChild(editSheetBtn);
+    titleActions.appendChild(deleteSheetBtn);
 
-titleRow.appendChild(title);
-titleRow.appendChild(titleActions);
+    titleRow.appendChild(title);
+    titleRow.appendChild(titleActions);
 
     const keywordList = document.createElement("div");
     keywordList.className = "file-fixer-keyword-list";
@@ -2095,7 +1949,7 @@ titleRow.appendChild(titleActions);
     addRow.appendChild(input);
     addRow.appendChild(addBtn);
 
-card.appendChild(titleRow);
+    card.appendChild(titleRow);
     card.appendChild(keywordList);
     card.appendChild(addRow);
 
@@ -2145,3 +1999,12 @@ function addOrganizerSheetCategory() {
   sheetNameInput.value = "";
   keywordsInput.value = "";
 }
+
+// Used only by automated tests (ignored by the page).
+export const __fileFixerTestApi = {
+  collectFixedEntries,
+  buildFileFixerResults,
+  fixSingleRow,
+  extractPhonesFromText,
+  prepareRawRow,
+};
